@@ -1,0 +1,72 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#06B6D4"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="100" cy="100" r="200" fill="#8B5CF6" opacity="0.1"/>
+  <circle cx="1100" cy="530" r="250" fill="#06B6D4" opacity="0.1"/>
+  
+  <!-- Grid pattern -->
+  <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+    <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#334155" stroke-width="0.5" opacity="0.3"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Logo icon -->
+  <rect x="520" y="150" width="70" height="70" rx="16" fill="url(#primaryGradient)"/>
+  <path d="M540 200 L555 175 L570 190 L555 205 Z" fill="white" opacity="0.9"/>
+  <path d="M545 185 L560 170" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- App name -->
+  <text x="600" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="white" text-anchor="middle">
+    WealthPath
+  </text>
+  
+  <!-- Tagline -->
+  <text x="600" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#94a3b8" text-anchor="middle">
+    Personal Finance Manager
+  </text>
+  
+  <!-- Feature pills -->
+  <rect x="200" y="400" width="180" height="45" rx="22" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="290" y="430" font-family="system-ui, sans-serif" font-size="18" fill="#e2e8f0" text-anchor="middle">📊 Track Expenses</text>
+  
+  <rect x="410" y="400" width="180" height="45" rx="22" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="500" y="430" font-family="system-ui, sans-serif" font-size="18" fill="#e2e8f0" text-anchor="middle">💰 Smart Budgets</text>
+  
+  <rect x="620" y="400" width="180" height="45" rx="22" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="710" y="430" font-family="system-ui, sans-serif" font-size="18" fill="#e2e8f0" text-anchor="middle">🎯 Savings Goals</text>
+  
+  <rect x="830" y="400" width="180" height="45" rx="22" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="920" y="430" font-family="system-ui, sans-serif" font-size="18" fill="#e2e8f0" text-anchor="middle">💳 Manage Debt</text>
+  
+  <!-- CTA -->
+  <rect x="450" y="490" width="300" height="60" rx="30" fill="url(#primaryGradient)"/>
+  <text x="600" y="530" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="white" text-anchor="middle">Start Free Today</text>
+  
+  <!-- URL -->
+  <text x="600" y="600" font-family="system-ui, sans-serif" font-size="18" fill="#64748b" text-anchor="middle">wealthpath.duckdns.org</text>
+</svg>
+
+
+
+
+
+
+
