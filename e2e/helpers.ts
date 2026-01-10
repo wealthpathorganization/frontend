@@ -1,4 +1,55 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, Response } from '@playwright/test';
+
+/**
+ * API error tracking for tests.
+ * Use setupApiErrorTracking() in beforeEach and assertNoApiErrors() after page loads.
+ */
+export interface ApiErrorTracker {
+  errors: Array<{ url: string; status: number; statusText: string }>;
+  clear: () => void;
+}
+
+/**
+ * Sets up API error tracking on a page.
+ * Call this in beforeEach, then use assertNoApiErrors() after page loads.
+ * @param page - Playwright page object
+ * @returns ApiErrorTracker object
+ */
+export function setupApiErrorTracking(page: Page): ApiErrorTracker {
+  const tracker: ApiErrorTracker = {
+    errors: [],
+    clear: () => { tracker.errors = []; }
+  };
+
+  page.on('response', (response: Response) => {
+    const url = response.url();
+    const status = response.status();
+    // Track 5xx errors on API calls
+    if (url.includes('/api/') && status >= 500) {
+      tracker.errors.push({
+        url,
+        status,
+        statusText: response.statusText()
+      });
+    }
+  });
+
+  return tracker;
+}
+
+/**
+ * Asserts that no API errors occurred.
+ * @param tracker - ApiErrorTracker from setupApiErrorTracking
+ * @param message - Optional message prefix
+ */
+export function assertNoApiErrors(tracker: ApiErrorTracker, message: string = 'API errors detected'): void {
+  if (tracker.errors.length > 0) {
+    const errorDetails = tracker.errors
+      .map(e => `  - ${e.status} ${e.statusText}: ${e.url}`)
+      .join('\n');
+    throw new Error(`${message}:\n${errorDetails}`);
+  }
+}
 
 /**
  * Generates a unique test email address using timestamp.

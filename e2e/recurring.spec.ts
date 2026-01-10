@@ -1,15 +1,35 @@
 import { test, expect } from '@playwright/test';
-import { registerAndLogin, waitForDialog, waitForDialogToClose, selectFirstOption, navigateTo } from './helpers';
+import { registerAndLogin, waitForDialog, waitForDialogToClose, selectFirstOption, navigateTo, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Recurring Transactions', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'recurring');
     await navigateTo(page, 'recurring');
   });
 
-  test('should display recurring transactions page with title', async ({ page }) => {
+  test.afterEach(async () => {
+    // Verify no API errors occurred during the test
+    assertNoApiErrors(apiTracker, 'Recurring transactions test encountered API errors');
+  });
+
+  test('should display recurring transactions page with title @smoke', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toContainText(/Recurring Transactions/i);
+  });
+
+  test('should load page and API endpoints without errors @smoke', async ({ page }) => {
+    // Wait for all API calls to complete
+    await page.waitForLoadState('networkidle');
+
+    // Verify the page loaded successfully by checking for the Active section heading
+    await expect(page.getByRole('heading', { name: /Active \(/i })).toBeVisible();
+
+    // The apiTracker in afterEach will catch any 500 errors from:
+    // - /api/recurring
+    // - /api/recurring/upcoming (called on dashboard, tested here for consistency)
   });
 
   test('should open add recurring transaction dialog', async ({ page }) => {
