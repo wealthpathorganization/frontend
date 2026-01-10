@@ -34,6 +34,7 @@ import {
   ArrowDownRight,
   Trash2,
   Loader2,
+  Receipt,
 } from "lucide-react"
 
 const EXPENSE_CATEGORIES = [
@@ -284,8 +285,16 @@ function TransactionList({
   if (!transactions.length) {
     return (
       <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">{t('transactions.noTransactions')}</p>
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <Receipt className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium">{t('transactions.noTransactions')}</p>
+              <p className="text-sm text-muted-foreground">{t('transactions.noTransactionsDescription')}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     )

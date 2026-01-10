@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, TrendingUp } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useLocale } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,7 @@ function GoogleIcon({ className }: { className?: string }) {
 function LoginContent() {
   const router = useRouter()
   const locale = useLocale()
+  const t = useTranslations('auth')
   const searchParams = useSearchParams()
   const { login, setToken, isLoading } = useAuthStore()
   const { toast } = useToast()
@@ -54,7 +55,7 @@ function LoginContent() {
 
     if (error) {
       toast({
-        title: "Login failed",
+        title: t('loginFailed'),
         description: error === "oauth_failed" ? "OAuth login failed" : error,
         variant: "destructive",
       })
@@ -68,7 +69,7 @@ function LoginContent() {
       router.push(`/${locale}/dashboard`)
     } catch (error) {
       toast({
-        title: "Login failed",
+        title: t('loginFailed'),
         description: error instanceof Error ? error.message : "Invalid credentials",
         variant: "destructive",
       })
@@ -89,13 +90,13 @@ function LoginContent() {
           <div className="mx-auto w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 shadow-lg">
             <TrendingUp className="w-7 h-7 text-white" />
           </div>
-          <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
-          <CardDescription>Sign in to your WealthPath account</CardDescription>
+          <CardTitle className="text-2xl font-display">{t('welcomeBack')}</CardTitle>
+          <CardDescription>{t('signInDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -106,7 +107,7 @@ function LoginContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -120,10 +121,10 @@ function LoginContent() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  {t('signingIn')}
                 </>
               ) : (
-                "Sign in"
+                t('signIn')
               )}
             </Button>
           </form>
@@ -133,7 +134,7 @@ function LoginContent() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-background px-2 text-muted-foreground">{t('orContinueWith')}</span>
             </div>
           </div>
 
@@ -157,9 +158,9 @@ function LoginContent() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Don&apos;t have an account?{" "}
+            {t('dontHaveAccount')}{" "}
             <Link href="/register" className="text-primary hover:underline font-medium">
-              Sign up
+              {t('signUp')}
             </Link>
           </p>
         </CardContent>

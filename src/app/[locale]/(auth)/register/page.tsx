@@ -11,11 +11,13 @@ import { useAuthStore } from "@/store/auth"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import { useTranslations } from "next-intl"
 
 export default function RegisterPage() {
   const router = useRouter()
   const { register, isLoading } = useAuthStore()
   const { toast } = useToast()
+  const t = useTranslations('auth')
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -27,7 +29,7 @@ export default function RegisterPage() {
       router.push("/dashboard")
     } catch (error) {
       toast({
-        title: "Registration failed",
+        title: t('registrationFailed'),
         description: error instanceof Error ? error.message : "Could not create account",
         variant: "destructive",
       })
@@ -43,13 +45,13 @@ export default function RegisterPage() {
           <div className="mx-auto w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 shadow-lg">
             <TrendingUp className="w-7 h-7 text-white" />
           </div>
-          <CardTitle className="text-2xl font-display">Create an account</CardTitle>
-          <CardDescription>Start your journey to financial freedom</CardDescription>
+          <CardTitle className="text-2xl font-display">{t('createAccount')}</CardTitle>
+          <CardDescription>{t('createAccountDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t('name')}</Label>
               <Input
                 id="name"
                 type="text"
@@ -60,7 +62,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -71,7 +73,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -86,17 +88,17 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating account...
+                  {t('creatingAccount')}
                 </>
               ) : (
-                "Create account"
+                t('createAccountButton')
               )}
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Already have an account?{" "}
+            {t('alreadyHaveAccount')}{" "}
             <Link href="/login" className="text-primary hover:underline font-medium">
-              Sign in
+              {t('signIn')}
             </Link>
           </p>
         </CardContent>

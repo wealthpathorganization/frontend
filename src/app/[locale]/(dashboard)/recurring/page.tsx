@@ -347,9 +347,15 @@ export default function RecurringPage() {
               ))}
             </div>
           ) : activeItems.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              {t('recurring.noActive')}
-            </p>
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div className="text-center">
+                <p className="font-medium">{t('recurring.noActive')}</p>
+                <p className="text-sm text-muted-foreground">{t('recurring.noActiveDescription')}</p>
+              </div>
+            </div>
           ) : (
             <div className="divide-y">
               {activeItems.map((item) => (

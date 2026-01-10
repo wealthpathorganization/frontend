@@ -70,7 +70,19 @@
     "loginWithFacebook": "Đăng nhập bằng Facebook",
     "alreadyHaveAccount": "Đã có tài khoản?",
     "dontHaveAccount": "Chưa có tài khoản?",
-    "forgotPassword": "Quên mật khẩu?"
+    "forgotPassword": "Quên mật khẩu?",
+    "welcomeBack": "Chào mừng trở lại",
+    "signInDescription": "Đăng nhập vào tài khoản WealthPath của bạn",
+    "signIn": "Đăng nhập",
+    "signingIn": "Đang đăng nhập...",
+    "orContinueWith": "Hoặc tiếp tục với",
+    "signUp": "Đăng ký",
+    "loginFailed": "Đăng nhập thất bại",
+    "createAccount": "Tạo tài khoản",
+    "createAccountDescription": "Bắt đầu hành trình tự do tài chính của bạn",
+    "createAccountButton": "Tạo tài khoản",
+    "creatingAccount": "Đang tạo tài khoản...",
+    "registrationFailed": "Đăng ký thất bại"
   },
   "settings": {
     "title": "Cài đặt",
@@ -103,6 +115,7 @@
     "addNote": "Thêm ghi chú...",
     "date": "Ngày",
     "noTransactions": "Không tìm thấy giao dịch",
+    "noTransactionsDescription": "Bắt đầu theo dõi tài chính bằng cách thêm giao dịch đầu tiên",
     "deleteTransaction": "Xóa giao dịch",
     "deleteConfirm": "Bạn có chắc chắn muốn xóa giao dịch này?",
     "categories": {
@@ -307,6 +320,7 @@
     "pause": "Tạm dừng",
     "resume": "Tiếp tục",
     "noActive": "Không có giao dịch định kỳ đang hoạt động",
+    "noActiveDescription": "Thiết lập giao dịch định kỳ để tự động theo dõi hóa đơn và thu nhập",
     "noRecurring": "Không tìm thấy giao dịch định kỳ",
     "upcoming": "Sắp tới",
     "autoAddDescription": "Các giao dịch này sẽ được tự động thêm theo lịch",

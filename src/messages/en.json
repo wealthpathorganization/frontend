@@ -70,7 +70,19 @@
     "loginWithFacebook": "Login with Facebook",
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Forgot password?",
+    "welcomeBack": "Welcome back",
+    "signInDescription": "Sign in to your WealthPath account",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "orContinueWith": "Or continue with",
+    "signUp": "Sign up",
+    "loginFailed": "Login failed",
+    "createAccount": "Create an account",
+    "createAccountDescription": "Start your journey to financial freedom",
+    "createAccountButton": "Create account",
+    "creatingAccount": "Creating account...",
+    "registrationFailed": "Registration failed"
   },
   "settings": {
     "title": "Settings",
@@ -103,6 +115,7 @@
     "addNote": "Add a note...",
     "date": "Date",
     "noTransactions": "No transactions found",
+    "noTransactionsDescription": "Start tracking your finances by adding your first transaction",
     "deleteTransaction": "Delete Transaction",
     "deleteConfirm": "Are you sure you want to delete this transaction?",
     "categories": {
@@ -307,6 +320,7 @@
     "pause": "Pause",
     "resume": "Resume",
     "noActive": "No active recurring transactions",
+    "noActiveDescription": "Set up recurring transactions for automatic bills and income tracking",
     "noRecurring": "No recurring transactions found",
     "upcoming": "Upcoming",
     "autoAddDescription": "These transactions will be automatically added on schedule",
