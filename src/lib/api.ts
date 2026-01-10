@@ -284,6 +284,27 @@ class ApiClient {
   async scrapeRates() {
     return this.request<{ message: string; count: number }>("/api/interest-rates/scrape", { method: "POST" })
   }
+
+  // Reports
+  async getMonthlyReport(year: number, month: number) {
+    return this.request<MonthlyReport>("/api/reports/monthly", {
+      params: { year: year.toString(), month: month.toString() },
+    })
+  }
+
+  async getCategoryTrends(months?: number, limit?: number) {
+    const params: Record<string, string> = {}
+    if (months) params.months = months.toString()
+    if (limit) params.limit = limit.toString()
+    return this.request<CategoryTrendsResponse>("/api/reports/category-trends", { params })
+  }
+
+  // Calendar
+  async getRecurringCalendar(year: number, month: number) {
+    return this.request<CalendarResponse>("/api/recurring/calendar", {
+      params: { year: year.toString(), month: month.toString() },
+    })
+  }
 }
 
 export const api = new ApiClient()
@@ -573,5 +594,95 @@ export interface RateHistoryEntry {
   termMonths: number
   rate: string
   recordedDate: string
+}
+
+// Monthly Report Types
+export interface MonthlyReport {
+  year: number
+  month: number
+  currency: string
+  totalIncome: string
+  totalExpenses: string
+  netSavings: string
+  savingsRate: number
+  topCategories: TopCategory[]
+  anomalies: Anomaly[]
+  comparedToLast: MonthComparison
+  generatedAt: string
+}
+
+export interface TopCategory {
+  category: string
+  amount: string
+  percentage: number
+  transactionCount: number
+}
+
+export interface Anomaly {
+  type: "unusual_expense" | "unusual_income" | "missed_income" | "budget_exceeded"
+  category: string
+  amount: string
+  description: string
+  severity: "info" | "warning" | "critical"
+}
+
+export interface MonthComparison {
+  incomeChange: number
+  expenseChange: number
+  savingsChange: number
+  trend: "improving" | "stable" | "declining"
+}
+
+// Category Trends Types
+export interface CategoryTrendsResponse {
+  currency: string
+  periodStart: string
+  periodEnd: string
+  trends: CategoryTrend[]
+  generatedAt: string
+}
+
+export interface CategoryTrend {
+  category: string
+  totalAmount: string
+  averageAmount: string
+  trendDirection: "increasing" | "decreasing" | "stable"
+  trendPercentage: number
+  monthlyData: MonthlyAmount[]
+}
+
+export interface MonthlyAmount {
+  month: string
+  amount: string
+}
+
+// Calendar Types
+export interface CalendarResponse {
+  year: number
+  month: number
+  currency: string
+  bills: CalendarBill[]
+  summary: CalendarSummary
+  generatedAt: string
+}
+
+export interface CalendarBill {
+  id: string
+  name: string
+  amount: string
+  category: string
+  dueDate: string
+  frequency: RecurringFrequency
+  isActive: boolean
+  type: "income" | "expense"
+}
+
+export interface CalendarSummary {
+  totalIncome: string
+  totalExpenses: string
+  netCashFlow: string
+  billCount: number
+  incomeCount: number
+  expenseCount: number
 }
 

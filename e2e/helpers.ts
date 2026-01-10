@@ -83,20 +83,26 @@ export async function selectFirstOption(page: Page, triggerText?: string | RegEx
 export async function navigateTo(page: Page, path: string): Promise<void> {
   // Normalize path to include locale if missing
   const normalizedPath = path.startsWith('/') ? path : `/en/${path}`;
-  
+
   // Try to use in-app navigation first (preserves auth state better)
   const pathName = normalizedPath.replace(/^\/en|^\/vi/, '').replace(/^\//, '');
+
+  // First try to find link by href (most reliable)
+  const hrefLink = page.locator(`a[href*="/${pathName}"]`).first();
+  // Also try by name as fallback
   const navLink = page.getByRole('link', { name: new RegExp(pathName, 'i') });
-  
-  if (await navLink.first().isVisible({ timeout: 2000 }).catch(() => false)) {
+
+  if (await hrefLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await hrefLink.click();
+  } else if (await navLink.first().isVisible({ timeout: 1000 }).catch(() => false)) {
     await navLink.first().click();
   } else {
     // Fall back to direct navigation
     await page.goto(normalizedPath);
   }
-  
+
   await page.waitForLoadState('networkidle');
-  
+
   // If redirected to login, auth was lost - retry once with direct navigation
   const currentUrl = page.url();
   if (currentUrl.includes('/login') || currentUrl.includes('/register')) {
