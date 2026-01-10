@@ -1,10 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { navigateTo, registerAndLogin, selectFirstOption, waitForDialog, waitForDialogToClose } from './helpers';
+import { navigateTo, registerAndLogin, selectFirstOption, waitForDialog, waitForDialogToClose, fillCurrencyInput, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Debts', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'debt');
     await navigateTo(page, 'debts');
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Debts test encountered API errors');
   });
 
   test('should display debts page with title', async ({ page }) => {
@@ -19,38 +26,24 @@ test.describe('Debts', () => {
     await expect(page.getByLabel(/Debt Name/i)).toBeVisible();
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should add new debt successfully', async ({ page }) => {
+  test('should add new debt successfully', async ({ page }) => {
     await page.getByRole('button', { name: /Add Debt/i }).click();
     await waitForDialog(page);
 
     await page.getByLabel(/Debt Name/i).fill('Car Loan');
     await selectFirstOption(page); // Select debt type
 
-    // CurrencyInput fields - use quick amount buttons as workaround
     const dialog = page.getByRole('dialog');
 
-    // Total Amount: click +100 button 2 times = $200 (simplified for testing)
-    // For debts, showQuickAmounts=false, so we need to type using evaluate
-    await dialog.getByRole('textbox', { name: /Total Amount/i }).evaluate((el: HTMLInputElement) => {
-      el.value = '25000';
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    await dialog.getByRole('textbox', { name: /Current Balance/i }).evaluate((el: HTMLInputElement) => {
-      el.value = '20000';
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    // For CurrencyInput without quick amount buttons, use data-testid and fill
+    const currencyInputs = dialog.getByTestId('currency-input');
+    await currencyInputs.nth(0).fill('25000');
+    await currencyInputs.nth(1).fill('20000');
 
     await dialog.getByLabel(/Interest Rate/i).fill('5.5');
 
-    await dialog.getByRole('textbox', { name: /Minimum Payment/i }).evaluate((el: HTMLInputElement) => {
-      el.value = '450';
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await currencyInputs.nth(2).fill('450');
+
     await dialog.getByLabel(/Due Date/i).fill('15');
     await dialog.getByLabel(/Start Date/i).fill('2024-01-01');
 
@@ -78,21 +71,22 @@ test.describe('Debts', () => {
     }
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should delete debt with confirmation', async ({ page }) => {
+  test('should delete debt with confirmation', async ({ page }) => {
     // First create a debt
     await page.getByRole('button', { name: /Add Debt/i }).click();
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Debt Name/i).fill('Delete Test Debt');
     await selectFirstOption(page);
-    await dialog.getByRole('textbox', { name: /Total Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Total Amount/i }).pressSequentially('1000');
-    await dialog.getByRole('textbox', { name: /Current Balance/i }).click();
-    await dialog.getByRole('textbox', { name: /Current Balance/i }).pressSequentially('500');
+
+    const currencyInputs = dialog.getByTestId('currency-input');
+    await currencyInputs.nth(0).fill('1000');
+    await currencyInputs.nth(1).fill('500');
+
     await dialog.getByLabel(/Interest Rate/i).fill('5');
-    await dialog.getByRole('textbox', { name: /Minimum Payment/i }).click();
-    await dialog.getByRole('textbox', { name: /Minimum Payment/i }).pressSequentially('50');
+
+    await currencyInputs.nth(2).fill('50');
+
     await dialog.getByLabel(/Due Date/i).fill('1');
     await dialog.getByLabel(/Start Date/i).fill('2024-01-01');
     await dialog.getByRole('button', { name: /Add Debt/i }).click();
@@ -107,21 +101,22 @@ test.describe('Debts', () => {
     }
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should open payment dialog', async ({ page }) => {
+  test('should open payment dialog', async ({ page }) => {
     // First create a debt
     await page.getByRole('button', { name: /Add Debt/i }).click();
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Debt Name/i).fill('Credit Card');
     await selectFirstOption(page);
-    await dialog.getByRole('textbox', { name: /Total Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Total Amount/i }).pressSequentially('5000');
-    await dialog.getByRole('textbox', { name: /Current Balance/i }).click();
-    await dialog.getByRole('textbox', { name: /Current Balance/i }).pressSequentially('3000');
+
+    const currencyInputs = dialog.getByTestId('currency-input');
+    await currencyInputs.nth(0).fill('5000');
+    await currencyInputs.nth(1).fill('3000');
+
     await dialog.getByLabel(/Interest Rate/i).fill('18');
-    await dialog.getByRole('textbox', { name: /Minimum Payment/i }).click();
-    await dialog.getByRole('textbox', { name: /Minimum Payment/i }).pressSequentially('100');
+
+    await currencyInputs.nth(2).fill('100');
+
     await dialog.getByLabel(/Due Date/i).fill('1');
     await dialog.getByLabel(/Start Date/i).fill('2024-01-01');
     await dialog.getByRole('button', { name: /Add Debt/i }).click();

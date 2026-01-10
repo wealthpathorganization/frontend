@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { registerAndLogin, navigateTo } from './helpers';
+import { registerAndLogin, navigateTo, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Financial Calculator', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'calculator');
     await navigateTo(page, 'calculator');
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Calculator test');
   });
 
   test('should display calculator page with title', async ({ page }) => {
@@ -30,9 +37,9 @@ test.describe('Financial Calculator', () => {
     await expect(calculateButton).toBeEnabled();
     await calculateButton.click();
     
-    // Check for results
-    await expect(page.getByText('Monthly Payment')).toBeVisible();
-    await expect(page.getByText('Total Payment')).toBeVisible();
+    // Check for results (use exact match to avoid strict mode violation)
+    await expect(page.getByText('Monthly Payment', { exact: true })).toBeVisible();
+    await expect(page.getByText('Total Payment', { exact: true })).toBeVisible();
     await expect(page.getByText('Total Interest', { exact: true })).toBeVisible();
   });
 

@@ -1,7 +1,17 @@
-import { TEST_NAME, TEST_PASSWORD, generateTestEmail } from './helpers';
+import { TEST_NAME, TEST_PASSWORD, generateTestEmail, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 import { expect, test } from '@playwright/test';
 
 test.describe('Auth Flow', () => {
+  let apiTracker: ApiErrorTracker;
+
+  test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Auth test');
+  });
+
   test('should show login page for unauthenticated users @smoke', async ({ page }) => {
     await page.goto('/en/dashboard');
     await expect(page).toHaveURL(/login|register/);

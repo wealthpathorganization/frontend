@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { registerAndLogin, navigateTo } from './helpers';
+import { registerAndLogin, navigateTo, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Settings', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'settings');
     await navigateTo(page, 'settings');
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Settings test');
   });
 
   test('should display settings page with title', async ({ page }) => {

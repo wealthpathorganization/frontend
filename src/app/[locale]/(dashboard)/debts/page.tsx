@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api, Debt, CreateDebtInput, PayoffPlan } from "@/lib/api"
-import { formatDate, formatPercent } from "@/lib/utils"
+import { formatDate, formatPercent, toAPIDateTime } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -112,6 +112,7 @@ export default function DebtsPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    const startDateStr = formData.get("startDate") as string
     createMutation.mutate({
       name: formData.get("name") as string,
       type: formData.get("type") as string,
@@ -120,7 +121,7 @@ export default function DebtsPage() {
       interestRate: parseFloat(formData.get("interestRate") as string),
       minimumPayment: parseFloat(minimumPayment.replace(/,/g, "")),
       dueDay: parseInt(formData.get("dueDay") as string),
-      startDate: formData.get("startDate") as string,
+      startDate: toAPIDateTime(startDateStr) || new Date().toISOString(),
     })
     // Reset after submit
     setOriginalAmount("")

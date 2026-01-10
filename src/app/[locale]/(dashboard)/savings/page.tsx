@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api, SavingsGoal, CreateSavingsGoalInput } from "@/lib/api"
-import { formatPercent, formatDate } from "@/lib/utils"
+import { formatPercent, formatDate, toAPIDateTime } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -86,10 +86,11 @@ export default function SavingsPage() {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const colorIndex = Math.floor(Math.random() * COLORS.length)
+    const targetDateStr = formData.get("targetDate") as string
     createMutation.mutate({
       name: formData.get("name") as string,
       targetAmount: parseFloat(targetAmount.replace(/,/g, "")),
-      targetDate: formData.get("targetDate") as string || undefined,
+      targetDate: toAPIDateTime(targetDateStr) || undefined,
       color: COLORS[colorIndex],
     })
     setTargetAmount("") // Reset after submit

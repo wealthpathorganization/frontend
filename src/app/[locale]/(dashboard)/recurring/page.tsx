@@ -7,7 +7,7 @@ import {
   RecurringTransaction,
   CreateRecurringInput,
 } from "@/lib/api"
-import { formatDate } from "@/lib/utils"
+import { formatDate, toAPIDateTime } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -139,13 +139,14 @@ export default function RecurringPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    const startDateStr = formData.get("startDate") as string
     createMutation.mutate({
       type,
       amount: parseFloat(amount.replace(/,/g, "")),
       category: formData.get("category") as string,
       description: formData.get("description") as string,
       frequency: formData.get("frequency") as CreateRecurringInput["frequency"],
-      startDate: formData.get("startDate") as string,
+      startDate: toAPIDateTime(startDateStr) || new Date().toISOString(),
     })
     setAmount("") // Reset after submit
   }

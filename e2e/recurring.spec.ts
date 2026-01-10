@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { registerAndLogin, waitForDialog, waitForDialogToClose, selectFirstOption, navigateTo, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
+import { registerAndLogin, waitForDialog, waitForDialogToClose, selectFirstOption, navigateTo, fillCurrencyInput, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Recurring Transactions', () => {
   let apiTracker: ApiErrorTracker;
@@ -39,16 +39,14 @@ test.describe('Recurring Transactions', () => {
     await expect(page.getByLabel(/Amount/i)).toBeVisible();
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should create recurring expense successfully', async ({ page }) => {
+  test('should create recurring expense successfully', async ({ page }) => {
     await page.getByRole('button', { name: /Add Recurring/i }).click();
     await waitForDialog(page);
 
     const dialog = page.getByRole('dialog');
 
-    // Fill amount using pressSequentially to trigger onChange
-    await dialog.getByRole('textbox', { name: /Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Amount/i }).pressSequentially('15.99');
+    // Use data-testid for reliable quick amount button selection
+    await dialog.getByTestId('quick-amount-100').click();
 
     // Select category
     await selectFirstOption(page);
@@ -65,8 +63,7 @@ test.describe('Recurring Transactions', () => {
     await expect(page.getByText(/Netflix/i)).toBeVisible();
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should create recurring income successfully', async ({ page }) => {
+  test('should create recurring income successfully', async ({ page }) => {
     await page.getByRole('button', { name: /Add Recurring/i }).click();
     await waitForDialog(page);
 
@@ -76,9 +73,8 @@ test.describe('Recurring Transactions', () => {
     const incomeButton = dialog.getByRole('button', { name: /Income/i });
     await incomeButton.click();
 
-    // Fill amount using pressSequentially to trigger onChange
-    await dialog.getByRole('textbox', { name: /Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Amount/i }).pressSequentially('5000');
+    // Use data-testid for reliable quick amount button selection
+    await dialog.getByTestId('quick-amount-500').click();
 
     // Select category (income categories appear after switching type)
     await page.waitForTimeout(300); // Wait for category options to update
@@ -100,14 +96,12 @@ test.describe('Recurring Transactions', () => {
     await expect(page.getByText(/Net Monthly/i)).toBeVisible();
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should delete recurring transaction', async ({ page }) => {
+  test('should delete recurring transaction', async ({ page }) => {
     // First create one
     await page.getByRole('button', { name: /Add Recurring/i }).click();
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('textbox', { name: /Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Amount/i }).pressSequentially('25');
+    await dialog.getByTestId('quick-amount-10').click();
     await selectFirstOption(page);
     await dialog.getByLabel(/Description/i).fill('Delete Test');
     const submitButton = dialog.getByRole('button', { name: /Create Recurring Transaction/i });
@@ -126,14 +120,12 @@ test.describe('Recurring Transactions', () => {
     }
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should pause recurring transaction', async ({ page }) => {
+  test('should pause recurring transaction', async ({ page }) => {
     // First create one
     await page.getByRole('button', { name: /Add Recurring/i }).click();
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('textbox', { name: /Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Amount/i }).pressSequentially('100');
+    await dialog.getByTestId('quick-amount-100').click();
     await selectFirstOption(page);
     await dialog.getByLabel(/Description/i).fill('Pause Test');
     const submitButton = dialog.getByRole('button', { name: /Create Recurring Transaction/i });

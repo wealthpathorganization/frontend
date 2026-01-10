@@ -64,7 +64,11 @@ function getQuickAmounts(currency: string): { label: string; value: number }[] {
 const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ className, value, onChange, currency = "USD", showQuickAmounts = true, ...props }, ref) => {
     const [displayValue, setDisplayValue] = React.useState("")
-    
+    const inputRef = React.useRef<HTMLInputElement>(null)
+
+    // Combine refs
+    React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
+
     // Sync display value when external value changes
     React.useEffect(() => {
       if (value !== undefined && value !== "") {
@@ -73,14 +77,12 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
         setDisplayValue("")
       }
     }, [value])
-    
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const input = e.target.value
-      
+
+    const processInput = (input: string) => {
       // Allow typing shorthand
       if (/^[\d.,kmb\s]*$/i.test(input)) {
         setDisplayValue(input)
-        
+
         // Try to parse and emit raw number
         const parsed = parseShorthand(input)
         if (parsed !== null) {
@@ -91,7 +93,20 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
         }
       }
     }
-    
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      processInput(e.target.value)
+    }
+
+    // Handle input event for better Playwright compatibility
+    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      const target = e.target as HTMLInputElement
+      // Only process if value differs from displayValue (handles programmatic input)
+      if (target.value !== displayValue) {
+        processInput(target.value)
+      }
+    }
+
     const handleBlur = () => {
       // Format on blur
       const parsed = parseShorthand(displayValue)
@@ -100,29 +115,31 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
         onChange(parsed.toString())
       }
     }
-    
+
     const handleQuickAmount = (amount: number) => {
       const current = parseFloat(String(value).replace(/,/g, "")) || 0
       const newValue = current + amount
       setDisplayValue(formatWithSeparators(newValue))
       onChange(newValue.toString())
     }
-    
+
     const quickAmounts = getQuickAmounts(currency)
-    
+
     return (
       <div className="space-y-2">
         <div className="relative">
           <input
             type="text"
             inputMode="decimal"
+            data-testid="currency-input"
             className={cn(
               "flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow",
               className
             )}
-            ref={ref}
+            ref={inputRef}
             value={displayValue}
             onChange={handleChange}
+            onInput={handleInput}
             onBlur={handleBlur}
             placeholder="0 or 5m, 500k..."
             {...props}
@@ -135,6 +152,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
                 key={qa.value}
                 type="button"
                 onClick={() => handleQuickAmount(qa.value)}
+                data-testid={`quick-amount-${qa.value}`}
                 className="px-2 py-1 text-xs rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
               >
                 {qa.label}

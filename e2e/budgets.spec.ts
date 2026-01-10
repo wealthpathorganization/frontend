@@ -1,10 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { navigateTo, registerAndLogin, selectFirstOption, waitForDialog, waitForDialogToClose } from './helpers';
+import { navigateTo, registerAndLogin, selectFirstOption, waitForDialog, waitForDialogToClose, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Budgets', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'budget');
     await navigateTo(page, 'budgets');
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Budgets test');
   });
 
   test('should display budgets page with title', async ({ page }) => {

@@ -1,10 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { navigateTo, registerAndLogin, waitForDialog, waitForDialogToClose } from './helpers';
+import { navigateTo, registerAndLogin, waitForDialog, waitForDialogToClose, fillCurrencyInput, setupApiErrorTracking, assertNoApiErrors, ApiErrorTracker } from './helpers';
 
 test.describe('Savings Goals', () => {
+  let apiTracker: ApiErrorTracker;
+
   test.beforeEach(async ({ page }) => {
+    apiTracker = setupApiErrorTracking(page);
     await registerAndLogin(page, 'savings');
     await navigateTo(page, 'savings');
+  });
+
+  test.afterEach(async () => {
+    assertNoApiErrors(apiTracker, 'Savings goals test encountered API errors');
   });
 
   test('should display savings page with title', async ({ page }) => {
@@ -19,15 +26,17 @@ test.describe('Savings Goals', () => {
     await expect(page.getByLabel(/Goal Name/i)).toBeVisible();
   });
 
-  // TODO: CurrencyInput component doesn't accept Playwright input - needs fix in component
-  test.skip('should create new savings goal successfully', async ({ page }) => {
+  test('should create new savings goal successfully', async ({ page }) => {
     await page.getByRole('button', { name: /New Goal/i }).click();
     await waitForDialog(page);
 
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Goal Name/i).fill('Vacation Fund');
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).pressSequentially('5000');
+
+    // Click quick amount buttons
+    const btn500 = dialog.getByRole('button', { name: '+500' });
+    await btn500.click();
+    await btn500.click();
 
     const dateInput = dialog.getByLabel(/Target Date/i);
     if (await dateInput.isVisible()) {
@@ -54,8 +63,7 @@ test.describe('Savings Goals', () => {
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Goal Name/i).fill('Delete Test Goal');
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).pressSequentially('1000');
+    await dialog.getByTestId('quick-amount-100').click();
     await dialog.getByRole('button', { name: /Create Goal/i }).click();
     await waitForDialogToClose(page);
 
@@ -73,8 +81,7 @@ test.describe('Savings Goals', () => {
     await waitForDialog(page);
     const createDialog = page.getByRole('dialog');
     await createDialog.getByLabel(/Goal Name/i).fill('Emergency Fund');
-    await createDialog.getByRole('textbox', { name: /Target Amount/i }).click();
-    await createDialog.getByRole('textbox', { name: /Target Amount/i }).pressSequentially('10000');
+    await createDialog.getByTestId('quick-amount-500').click();
     const submitButton = createDialog.getByRole('button', { name: /Create Goal/i });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
@@ -95,8 +102,7 @@ test.describe('Savings Goals', () => {
     await waitForDialog(page);
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel(/Goal Name/i).fill('Car Fund');
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).click();
-    await dialog.getByRole('textbox', { name: /Target Amount/i }).pressSequentially('20000');
+    await dialog.getByTestId('quick-amount-500').click();
     await dialog.getByRole('button', { name: /Create Goal/i }).click();
     await waitForDialogToClose(page);
 

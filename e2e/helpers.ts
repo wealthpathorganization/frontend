@@ -184,3 +184,80 @@ export async function fillField(page: Page, label: string | RegExp, value: strin
 export async function clickButton(page: Page, text: string | RegExp): Promise<void> {
   await page.getByRole('button', { name: text }).click();
 }
+
+/**
+ * Fills a currency input field (workaround for CurrencyInput component).
+ * Uses pressSequentially to properly trigger onChange events.
+ * @param page - Playwright page object
+ * @param locator - Locator for the input element
+ * @param amount - Amount value as string
+ */
+export async function fillCurrencyInput(page: Page, locator: import('@playwright/test').Locator, amount: string): Promise<void> {
+  await locator.click();
+  await locator.fill('');
+  await locator.pressSequentially(amount, { delay: 50 });
+}
+
+/**
+ * Waits for a toast notification to appear.
+ * @param page - Playwright page object
+ * @param text - Text or regex to match in the toast
+ * @param timeout - Maximum time to wait (default 5000ms)
+ */
+export async function waitForToast(page: Page, text: string | RegExp, timeout: number = 5000): Promise<void> {
+  const toast = page.getByRole('status').filter({ hasText: text });
+  await expect(toast).toBeVisible({ timeout });
+}
+
+/**
+ * Verifies the page is using Vietnamese locale.
+ * @param page - Playwright page object
+ */
+export async function assertVietnameseLocale(page: Page): Promise<void> {
+  await expect(page.locator('html')).toHaveAttribute('lang', 'vi');
+}
+
+/**
+ * Registers a new user with Vietnamese locale.
+ * @param page - Playwright page object
+ * @param emailPrefix - Prefix for the generated email
+ * @returns The generated email address
+ */
+export async function registerAndLoginVietnamese(page: Page, emailPrefix: string = 'test'): Promise<string> {
+  const email = generateTestEmail(emailPrefix);
+
+  await page.goto('/vi/register');
+  await page.waitForLoadState('networkidle');
+
+  await page.getByLabel(/tên|name/i).fill(TEST_NAME);
+  await page.getByLabel(/email/i).fill(email);
+  await page.getByLabel(/mật khẩu|password/i).fill(TEST_PASSWORD);
+
+  await page.getByRole('button', { name: /tạo tài khoản|đăng ký|create account|sign up|register/i }).click();
+
+  await expect(page).toHaveURL(/dashboard/, { timeout: 10000 });
+  await page.waitForLoadState('networkidle');
+
+  return email;
+}
+
+/**
+ * Navigates to a page in Vietnamese locale.
+ * @param page - Playwright page object
+ * @param path - The path to navigate to (without locale prefix)
+ */
+export async function navigateToVietnamese(page: Page, path: string): Promise<void> {
+  const normalizedPath = path.startsWith('/') ? `/vi${path}` : `/vi/${path}`;
+
+  // Try in-app navigation first
+  const pathName = path.replace(/^\//, '');
+  const hrefLink = page.locator(`a[href*="/${pathName}"]`).first();
+
+  if (await hrefLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await hrefLink.click();
+  } else {
+    await page.goto(normalizedPath);
+  }
+
+  await page.waitForLoadState('networkidle');
+}
