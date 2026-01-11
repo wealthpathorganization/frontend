@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
@@ -42,6 +43,7 @@ function LoginContent() {
   const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
 
   // 2FA state
   const [requires2FA, setRequires2FA] = useState(false)
@@ -73,7 +75,7 @@ function LoginContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const result = await login(email, password)
+      const result = await login(email, password, rememberMe)
       if (result.requiresTOTP && result.tempToken) {
         setRequires2FA(true)
         setTempToken(result.tempToken)
@@ -241,6 +243,19 @@ function LoginContent() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="rememberMe"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              />
+              <Label
+                htmlFor="rememberMe"
+                className="text-sm font-normal cursor-pointer"
+              >
+                {t('rememberMe')}
+              </Label>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

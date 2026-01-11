@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { useAuthStore } from "@/store/auth"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslations } from 'next-intl'
 import { TwoFactorSetup } from "@/components/settings/two-factor-setup"
@@ -24,10 +25,22 @@ import { NotificationPreferences } from "@/components/settings/notification-pref
 
 export default function SettingsPage() {
   const t = useTranslations()
+  const router = useRouter()
   const { user, setUser, logout } = useAuthStore()
   const { toast } = useToast()
   const [name, setName] = useState(user?.name || "")
   const [currency, setCurrency] = useState(user?.currency || "USD")
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      router.push("/login")
+    } catch {
+      setIsLoggingOut(false)
+    }
+  }
 
   const updateMutation = useMutation({
     mutationFn: () => api.updateSettings({ name, currency }),
@@ -145,8 +158,12 @@ export default function SettingsPage() {
           <CardDescription>{t('auth.logout')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={logout}>
-            <LogOut className="w-4 h-4 mr-2" />
+          <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+            {isLoggingOut ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <LogOut className="w-4 h-4 mr-2" />
+            )}
             {t('auth.logout')}
           </Button>
         </CardContent>

@@ -65,32 +65,52 @@ export const TEST_NAME = 'Test User';
 
 /**
  * Registers a new user and logs them in, ensuring auth persists.
+ * Supports both legacy localStorage auth and new cookie-based auth.
  * @param page - Playwright page object
  * @param emailPrefix - Prefix for the generated email
  * @returns The generated email address
  */
 export async function registerAndLogin(page: Page, emailPrefix: string = 'test'): Promise<string> {
   const email = generateTestEmail(emailPrefix);
-  
+
   await page.goto('/en/register');
   await page.waitForLoadState('networkidle');
-  
+
   await page.getByLabel(/name/i).fill(TEST_NAME);
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-  
+
   await page.getByRole('button', { name: /create account|sign up|register/i }).click();
-  
+
   await expect(page).toHaveURL(/dashboard/, { timeout: 10000 });
   await page.waitForLoadState('networkidle');
-  
-  // Ensure auth token is stored before continuing
+
+  // Ensure auth is established - check for either:
+  // 1. HttpOnly refresh token cookie (new system)
+  // 2. localStorage auth-storage (persisted user info)
+  // 3. Legacy token storage
   await page.waitForFunction(() => {
-    return localStorage.getItem('auth-storage') !== null || 
-           localStorage.getItem('token') !== null ||
-           document.cookie.includes('token');
-  }, { timeout: 5000 }).catch(() => {});
-  
+    // Check localStorage for auth state
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      try {
+        const parsed = JSON.parse(authStorage);
+        if (parsed.state?.isAuthenticated || parsed.isAuthenticated) {
+          return true;
+        }
+      } catch {}
+    }
+    // Check for legacy token
+    if (localStorage.getItem('token')) {
+      return true;
+    }
+    // Note: HttpOnly cookies are not visible to JS, but if we got here after redirect,
+    // the auth is established
+    return document.cookie.includes('refresh_token') || document.cookie.includes('token');
+  }, { timeout: 5000 }).catch(() => {
+    // Auth might still be valid via HttpOnly cookies that JS can't see
+  });
+
   return email;
 }
 
