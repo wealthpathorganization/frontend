@@ -19,27 +19,27 @@ describe('ApiClient', () => {
   });
 
   describe('setToken', () => {
-    it('sets token in localStorage', () => {
+    it('sets token in memory', () => {
       api.setToken('test-token');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('token', 'test-token');
+      // Token is now stored in memory only (not localStorage) for XSS protection
+      expect(api.getToken()).toBe('test-token');
     });
 
-    it('removes token when null', () => {
+    it('clears token when null', () => {
+      api.setToken('test-token');
       api.setToken(null);
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
+      expect(api.getToken()).toBeNull();
     });
   });
 
   describe('getToken', () => {
-    it('returns token from localStorage', () => {
-      mockLocalStorage.getItem.mockReturnValue('stored-token');
+    it('returns token from memory', () => {
+      api.setToken('stored-token');
       const token = api.getToken();
       expect(token).toBe('stored-token');
     });
 
     it('returns null when no token', () => {
-      mockLocalStorage.getItem.mockReturnValue(null);
-      // Reset the internal token state
       api.setToken(null);
       const token = api.getToken();
       expect(token).toBeNull();
@@ -102,15 +102,22 @@ describe('ApiClient', () => {
     });
 
     it('throws error on invalid credentials', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: () => Promise.resolve({ error: 'Invalid credentials' }),
-      });
+      // First call returns 401, then refresh attempt also fails
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve({ error: 'Invalid credentials' }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve({ error: 'Refresh failed' }),
+        });
 
       await expect(
         api.login({ email: 'test@example.com', password: 'wrong' })
-      ).rejects.toThrow('Invalid credentials');
+      ).rejects.toThrow('Session expired');
     });
   });
 

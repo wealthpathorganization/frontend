@@ -10,6 +10,10 @@ jest.mock('@/lib/api', () => ({
     register: jest.fn(),
     setToken: jest.fn(),
     getMe: jest.fn(),
+    logout: jest.fn().mockResolvedValue(undefined),
+    setOnLogoutCallback: jest.fn(),
+    getToken: jest.fn().mockReturnValue('mock-token'),
+    refreshAccessToken: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -22,6 +26,7 @@ describe('useAuthStore', () => {
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: true,
     });
     jest.clearAllMocks();
   });
@@ -131,22 +136,23 @@ describe('useAuthStore', () => {
   });
 
   describe('logout', () => {
-    it('clears user and authentication', () => {
+    it('clears user and authentication', async () => {
       // Set up authenticated state
       useAuthStore.setState({
         user: { id: '1', email: 'test@example.com', name: 'Test', currency: 'USD', createdAt: '' },
         isAuthenticated: true,
+        isInitialized: true,
       });
 
       const { result } = renderHook(() => useAuthStore());
 
-      act(() => {
-        result.current.logout();
+      await act(async () => {
+        await result.current.logout();
       });
 
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
-      expect(mockApi.setToken).toHaveBeenCalledWith(null);
+      expect(mockApi.logout).toHaveBeenCalled();
     });
   });
 
