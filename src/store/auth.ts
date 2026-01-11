@@ -12,26 +12,30 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<LoginResult>
+  isInitialized: boolean
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>
   loginWithTOTP: (tempToken: string, code: string) => Promise<void>
   loginWithBackupCode: (tempToken: string, backupCode: string) => Promise<void>
-  register: (email: string, password: string, name: string) => Promise<void>
-  logout: () => void
+  register: (email: string, password: string, name: string, rememberMe?: boolean) => Promise<void>
+  logout: () => Promise<void>
   setUser: (user: User | null) => void
   setToken: (token: string) => Promise<void>
+  refreshAccessToken: () => Promise<boolean>
+  initializeAuth: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: false,
 
-      login: async (email, password) => {
+      login: async (email, password, rememberMe = false) => {
         set({ isLoading: true })
         try {
-          const response = await api.login({ email, password })
+          const response = await api.login({ email, password, rememberMe })
 
           // Check if 2FA is required
           if (response.requiresTOTP && response.tempToken) {
@@ -39,9 +43,10 @@ export const useAuthStore = create<AuthState>()(
             return { requiresTOTP: true, tempToken: response.tempToken }
           }
 
-          // Normal login flow
-          if (response.token && response.user) {
-            api.setToken(response.token)
+          // Normal login flow - use accessToken if available, fallback to token for compatibility
+          const token = response.accessToken || response.token
+          if (token && response.user) {
+            api.setToken(token)
             set({ user: response.user, isAuthenticated: true, isLoading: false })
           }
           return { requiresTOTP: false }
@@ -55,8 +60,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           const response = await api.loginWithTOTP({ tempToken, code })
-          if (response.token && response.user) {
-            api.setToken(response.token)
+          const token = response.accessToken || response.token
+          if (token && response.user) {
+            api.setToken(token)
             set({ user: response.user, isAuthenticated: true, isLoading: false })
           }
         } catch (error) {
@@ -69,8 +75,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           const response = await api.loginWithBackupCode({ tempToken, backupCode })
-          if (response.token && response.user) {
-            api.setToken(response.token)
+          const token = response.accessToken || response.token
+          if (token && response.user) {
+            api.setToken(token)
             set({ user: response.user, isAuthenticated: true, isLoading: false })
           }
         } catch (error) {
@@ -79,11 +86,12 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email, password, name) => {
+      register: async (email, password, name, rememberMe = false) => {
         set({ isLoading: true })
         try {
-          const response = await api.register({ email, password, name })
-          api.setToken(response.token)
+          const response = await api.register({ email, password, name, rememberMe })
+          const token = response.accessToken || response.token
+          api.setToken(token)
           set({ user: response.user, isAuthenticated: true, isLoading: false })
         } catch (error) {
           set({ isLoading: false })
@@ -91,9 +99,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        api.setToken(null)
-        set({ user: null, isAuthenticated: false })
+      logout: async () => {
+        set({ isLoading: true })
+        try {
+          await api.logout()
+        } finally {
+          set({ user: null, isAuthenticated: false, isLoading: false })
+        }
       },
 
       setUser: (user) => {
@@ -110,9 +122,47 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false })
         }
       },
+
+      refreshAccessToken: async () => {
+        const result = await api.refreshAccessToken()
+        if (!result) {
+          // Refresh failed, clear auth state
+          set({ user: null, isAuthenticated: false })
+        }
+        return result
+      },
+
+      initializeAuth: () => {
+        // Set up logout callback to clear state when token refresh fails
+        api.setOnLogoutCallback(() => {
+          set({ user: null, isAuthenticated: false })
+          // Redirect to login if we're not already there
+          if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+            window.location.href = "/login"
+          }
+        })
+
+        // If user data is persisted but no access token in memory,
+        // try to refresh the token using the HttpOnly cookie
+        const state = get()
+        if (state.isAuthenticated && state.user && !api.getToken()) {
+          api.refreshAccessToken().then((success) => {
+            if (!success) {
+              // Refresh failed, clear persisted state
+              set({ user: null, isAuthenticated: false, isInitialized: true })
+            } else {
+              set({ isInitialized: true })
+            }
+          })
+        } else {
+          // No refresh needed, mark as initialized
+          set({ isInitialized: true })
+        }
+      },
     }),
     {
       name: "auth-storage",
+      // Only persist user info, not token (token is in memory only)
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
     }
   )

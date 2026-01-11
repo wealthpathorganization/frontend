@@ -16,13 +16,23 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const locale = useLocale()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isInitialized } = useAuthStore()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Only redirect after auth is initialized
+    if (isInitialized && !isAuthenticated) {
       router.push(`/${locale}/login`)
     }
-  }, [isAuthenticated, router, locale])
+  }, [isAuthenticated, isInitialized, router, locale])
+
+  // Wait for auth initialization before rendering
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   if (!isAuthenticated) {
     return null

@@ -2,31 +2,115 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>
+  skipAuth?: boolean
 }
 
+// Event for cross-tab logout sync
+const AUTH_LOGOUT_EVENT = "auth:logout"
+
 class ApiClient {
-  private token: string | null = null
+  // In-memory token storage only (not localStorage) for XSS protection
+  private accessToken: string | null = null
+  private isRefreshing = false
+  private refreshPromise: Promise<boolean> | null = null
+  private onLogoutCallback: (() => void) | null = null
 
   setToken(token: string | null) {
-    this.token = token
-    if (token) {
-      localStorage.setItem("token", token)
-    } else {
-      localStorage.removeItem("token")
-    }
+    this.accessToken = token
+    // No longer store in localStorage for security
   }
 
   getToken(): string | null {
-    if (typeof window === "undefined") return null
-    if (!this.token) {
-      this.token = localStorage.getItem("token")
+    return this.accessToken
+  }
+
+  /**
+   * Set callback to be called when logout is triggered (e.g., refresh token expired)
+   */
+  setOnLogoutCallback(callback: () => void) {
+    this.onLogoutCallback = callback
+  }
+
+  /**
+   * Refresh the access token using the HttpOnly refresh token cookie
+   */
+  async refreshAccessToken(): Promise<boolean> {
+    // If already refreshing, wait for that promise
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise
     }
-    return this.token
+
+    this.isRefreshing = true
+    this.refreshPromise = this.doRefresh()
+
+    try {
+      return await this.refreshPromise
+    } finally {
+      this.isRefreshing = false
+      this.refreshPromise = null
+    }
+  }
+
+  private async doRefresh(): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include", // Send HttpOnly cookie
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        this.accessToken = null
+        return false
+      }
+
+      const data = await response.json()
+      // Backend may return 'token' or 'accessToken' - check both for compatibility
+      const token = data.accessToken || data.token
+      if (token) {
+        this.accessToken = token
+        return true
+      }
+      return false
+    } catch {
+      this.accessToken = null
+      return false
+    }
+  }
+
+  /**
+   * Logout - revoke refresh token on server and clear local state
+   */
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}),
+        },
+      })
+    } catch {
+      // Ignore errors during logout
+    } finally {
+      this.accessToken = null
+      // Notify other tabs about logout
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const channel = new BroadcastChannel(AUTH_LOGOUT_EVENT)
+        channel.postMessage({ type: "logout" })
+        channel.close()
+      }
+      // Trigger logout callback
+      this.onLogoutCallback?.()
+    }
   }
 
   private async request<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-    const { params, ...init } = options
-    
+    const { params, skipAuth, ...init } = options
+
     let url = `${API_BASE}${endpoint}`
     if (params) {
       const searchParams = new URLSearchParams(params)
@@ -37,12 +121,50 @@ class ApiClient {
       "Content-Type": "application/json",
     }
 
-    const token = this.getToken()
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`
+    if (!skipAuth && this.accessToken) {
+      headers["Authorization"] = `Bearer ${this.accessToken}`
     }
 
-    const response = await fetch(url, { ...init, headers })
+    const response = await fetch(url, {
+      ...init,
+      headers,
+      credentials: "include", // Always include credentials for cookie handling
+    })
+
+    // Handle 401 - try to refresh token and retry
+    if (response.status === 401 && !skipAuth && !endpoint.includes("/auth/refresh")) {
+      const refreshed = await this.refreshAccessToken()
+      if (refreshed) {
+        // Retry the original request with new token
+        const retryHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+        }
+        if (this.accessToken) {
+          retryHeaders["Authorization"] = `Bearer ${this.accessToken}`
+        }
+
+        const retryResponse = await fetch(url, {
+          ...init,
+          headers: retryHeaders,
+          credentials: "include",
+        })
+
+        if (!retryResponse.ok) {
+          const error = await retryResponse.json().catch(() => ({ error: "Request failed" }))
+          throw new Error(error.error || "Request failed")
+        }
+
+        if (retryResponse.status === 204) {
+          return undefined as T
+        }
+
+        return retryResponse.json()
+      } else {
+        // Refresh failed - trigger logout
+        this.onLogoutCallback?.()
+        throw new Error("Session expired. Please log in again.")
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: "Request failed" }))
@@ -57,17 +179,34 @@ class ApiClient {
   }
 
   // Auth
-  async register(data: { email: string; password: string; name: string; currency?: string }) {
-    return this.request<{ token: string; user: User }>("/api/auth/register", {
+  async register(data: { email: string; password: string; name: string; currency?: string; rememberMe?: boolean }) {
+    return this.request<{ token: string; accessToken?: string; user: User }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
-  async login(data: { email: string; password: string }) {
+  async login(data: { email: string; password: string; rememberMe?: boolean }) {
     return this.request<AuthResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(data),
+    })
+  }
+
+  // Session Management
+  async getSessions() {
+    return this.request<Session[]>("/api/auth/sessions")
+  }
+
+  async revokeSession(sessionId: string) {
+    return this.request<{ message: string }>(`/api/auth/sessions/${sessionId}`, {
+      method: "DELETE",
+    })
+  }
+
+  async revokeAllSessions() {
+    return this.request<{ message: string }>("/api/auth/sessions", {
+      method: "DELETE",
     })
   }
 
@@ -365,7 +504,7 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`
     }
 
-    const response = await fetch(url, { headers })
+    const response = await fetch(url, { headers, credentials: "include" })
 
     if (!response.ok) {
       throw new Error("Failed to export transactions")
@@ -385,7 +524,7 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`
     }
 
-    const response = await fetch(url, { headers })
+    const response = await fetch(url, { headers, credentials: "include" })
 
     if (!response.ok) {
       throw new Error("Failed to export report")
@@ -454,9 +593,24 @@ export interface User {
 // Auth Response with optional 2FA fields
 export interface AuthResponse {
   token?: string
+  accessToken?: string // New: short-lived access token
   user?: User
   requiresTOTP?: boolean
   tempToken?: string
+}
+
+// Session type for session management
+export interface Session {
+  id: string
+  deviceInfo: {
+    browser?: string
+    os?: string
+    deviceType?: string
+  }
+  ipAddress?: string
+  createdAt: string
+  lastUsedAt: string
+  isCurrent: boolean
 }
 
 // 2FA Types

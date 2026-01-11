@@ -48,8 +48,8 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
   const [search, setSearch] = useState(initialFilters?.search || "")
   const [minAmount, setMinAmount] = useState(initialFilters?.minAmount || "")
   const [maxAmount, setMaxAmount] = useState(initialFilters?.maxAmount || "")
-  const [datePreset, setDatePreset] = useState<DatePreset | "">(
-    (initialFilters?.datePreset as DatePreset) || ""
+  const [datePreset, setDatePreset] = useState<DatePreset | "all-time">(
+    (initialFilters?.datePreset as DatePreset) || "all-time"
   )
   const [startDate, setStartDate] = useState(initialFilters?.startDate || "")
   const [endDate, setEndDate] = useState(initialFilters?.endDate || "")
@@ -66,7 +66,7 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
     debouncedSearch,
     minAmount,
     maxAmount,
-    datePreset,
+    datePreset && datePreset !== "all-time",
     selectedCategories.length > 0,
   ].filter(Boolean).length
 
@@ -77,7 +77,7 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
     if (debouncedSearch) filters.search = debouncedSearch
     if (minAmount) filters.minAmount = minAmount
     if (maxAmount) filters.maxAmount = maxAmount
-    if (datePreset && datePreset !== "custom") {
+    if (datePreset && datePreset !== "custom" && datePreset !== "all-time") {
       filters.datePreset = datePreset
     } else if (datePreset === "custom") {
       if (startDate) filters.startDate = startDate
@@ -128,7 +128,7 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
     setSearch("")
     setMinAmount("")
     setMaxAmount("")
-    setDatePreset("")
+    setDatePreset("all-time")
     setStartDate("")
     setEndDate("")
     setSelectedCategories([])
@@ -166,7 +166,7 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All time</SelectItem>
+            <SelectItem value="all-time">All time</SelectItem>
             {DATE_PRESETS.map((preset) => (
               <SelectItem key={preset.value} value={preset.value}>
                 {preset.label}
@@ -292,17 +292,17 @@ export function TransactionFiltersComponent({ onFiltersChange, initialFilters }:
               }}
             />
           )}
-          {datePreset && datePreset !== "custom" && (
+          {datePreset && datePreset !== "custom" && datePreset !== "all-time" && (
             <FilterTag
               label={DATE_PRESETS.find((p) => p.value === datePreset)?.label || datePreset}
-              onRemove={() => setDatePreset("")}
+              onRemove={() => setDatePreset("all-time")}
             />
           )}
           {datePreset === "custom" && (startDate || endDate) && (
             <FilterTag
               label={`${startDate || "..."} to ${endDate || "..."}`}
               onRemove={() => {
-                setDatePreset("")
+                setDatePreset("all-time")
                 setStartDate("")
                 setEndDate("")
               }}
