@@ -61,4 +61,50 @@ test.describe('Settings', () => {
     const emailText = page.getByText(/@example\.com/i);
     await expect(emailText).toBeVisible();
   });
+
+  test('should display Two-Factor Authentication section', async ({ page }) => {
+    const twoFactorHeading = page.getByRole('heading', { name: /Two-Factor Authentication|2FA/i });
+    await expect(twoFactorHeading).toBeVisible();
+
+    // Should show setup button when 2FA is not enabled
+    const setupButton = page.getByRole('button', { name: /Set up 2FA|Enable 2FA/i });
+    await expect(setupButton).toBeVisible();
+  });
+
+  test('should open 2FA setup dialog with QR code', async ({ page }) => {
+    const setupButton = page.getByRole('button', { name: /Set up 2FA|Enable 2FA/i });
+    await setupButton.click();
+
+    // Wait for dialog to open
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Should show QR code heading
+    await expect(page.getByText(/Scan QR Code/i)).toBeVisible();
+
+    // Should have a QR code SVG element rendered (not a broken image)
+    const qrCode = dialog.locator('svg').first();
+    await expect(qrCode).toBeVisible();
+
+    // Should have verification code input
+    const codeInput = dialog.getByPlaceholder('000000');
+    await expect(codeInput).toBeVisible();
+
+    // Should have cancel button
+    const cancelButton = dialog.getByRole('button', { name: /Cancel/i });
+    await expect(cancelButton).toBeVisible();
+
+    // Close dialog
+    await cancelButton.click();
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('should display Push Notifications section', async ({ page }) => {
+    const notificationsHeading = page.getByRole('heading', { name: /Push Notifications|Notifications/i });
+    await expect(notificationsHeading).toBeVisible();
+
+    // Should show enable/disable button
+    const notificationButton = page.getByRole('button', { name: /Enable|Disable/i }).last();
+    await expect(notificationButton).toBeVisible();
+  });
 });

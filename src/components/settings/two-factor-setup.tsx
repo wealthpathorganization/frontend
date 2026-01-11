@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { Shield, ShieldCheck, ShieldOff, Copy, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { QRCodeSVG } from "qrcode.react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -197,12 +198,10 @@ export function TwoFactorSetup() {
                   <div className="flex flex-col items-center space-y-4">
                     <p className="text-sm font-medium">{t('scanQR')}</p>
                     <div className="bg-white p-4 rounded-lg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={setupData.qrCodeUrl}
-                        alt="QR Code"
-                        width={200}
-                        height={200}
+                      <QRCodeSVG
+                        value={setupData.qrCodeUrl}
+                        size={200}
+                        level="M"
                       />
                     </div>
                     <Button
