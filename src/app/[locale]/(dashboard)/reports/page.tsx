@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { api, MonthlyReport, CategoryTrendsResponse } from "@/lib/api"
 import { useCurrency } from "@/hooks/use-currency"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -20,7 +21,9 @@ import {
   CategoryTrendsChart,
 } from "@/components/reports/category-chart"
 import { AnomalyList } from "@/components/reports/anomaly-alert"
-import { FileBarChart, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { useTranslations } from "next-intl"
+import { FileBarChart, TrendingUp, TrendingDown, Minus, Download, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const MONTHS = [
@@ -99,11 +102,38 @@ function TrendIndicator({ trend }: { trend: MonthlyReport["comparedToLast"]["tre
 
 export default function ReportsPage() {
   const { formatCurrency } = useCurrency()
+  const { toast } = useToast()
+  const t = useTranslations()
 
   const now = new Date()
   const [selectedYear, setSelectedYear] = React.useState(now.getFullYear())
   const [selectedMonth, setSelectedMonth] = React.useState(now.getMonth() + 1)
   const [trendPeriod, setTrendPeriod] = React.useState("6")
+  const [isExporting, setIsExporting] = React.useState(false)
+
+  const handleExportPDF = async () => {
+    setIsExporting(true)
+    try {
+      const { blob, filename } = await api.exportMonthlyReportPDF(selectedYear, selectedMonth)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast({ title: t("common.success"), description: t("export.pdfExported") })
+    } catch {
+      toast({
+        title: t("common.error"),
+        description: t("export.exportFailed"),
+        variant: "destructive",
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const years = React.useMemo(() => {
     const currentYear = now.getFullYear()
@@ -216,6 +246,18 @@ export default function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={isExporting || !hasData}
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {t("export.exportPDF")}
+          </Button>
         </div>
       </div>
 

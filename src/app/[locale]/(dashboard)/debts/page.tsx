@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, Debt, CreateDebtInput, PayoffPlan } from "@/lib/api"
+import { api, Debt, CreateDebtInput, PayoffPlan, DebtSummary } from "@/lib/api"
 import { formatDate, formatPercent, toAPIDateTime } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,9 @@ import {
   Car,
   GraduationCap,
   Wallet,
+  PartyPopper,
+  Clock,
+  Banknote,
 } from "lucide-react"
 
 const DEBT_TYPES = [
@@ -70,6 +73,11 @@ export default function DebtsPage() {
   const { data: debts, isLoading } = useQuery<Debt[]>({
     queryKey: ["debts"],
     queryFn: () => api.getDebts(),
+  })
+
+  const { data: debtSummary } = useQuery<DebtSummary>({
+    queryKey: ["debt-summary"],
+    queryFn: () => api.getDebtSummary(),
   })
 
   const { data: payoffPlan, isLoading: isPlanLoading } = useQuery<PayoffPlan>({
@@ -257,7 +265,7 @@ export default function DebtsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -299,7 +307,56 @@ export default function DebtsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Debt-Free Date Projection Card */}
+        <Card className={debtSummary?.debtFreeDate ? "bg-gradient-to-br from-success/10 to-success/5" : ""}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                totalDebt === 0 ? "bg-success/10" : "bg-primary/10"
+              }`}>
+                {totalDebt === 0 ? (
+                  <PartyPopper className="w-6 h-6 text-success" />
+                ) : (
+                  <Clock className="w-6 h-6 text-primary" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">{t("debtFreeDate")}</p>
+                {totalDebt === 0 ? (
+                  <p className="text-xl font-bold text-success">{t("youAreDebtFree")}</p>
+                ) : debtSummary?.debtFreeDate ? (
+                  <div>
+                    <p className="text-xl font-bold">{formatDate(debtSummary.debtFreeDate)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {debtSummary.monthsToDebtFree} {t("monthsRemaining")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xl font-bold">—</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Total Interest Cost Banner */}
+      {debtSummary && parseFloat(debtSummary.totalInterestCost) > 0 && (
+        <Card className="border-warning/50 bg-warning/5">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Banknote className="w-5 h-5 text-warning" />
+                <span className="text-sm font-medium">{t("projectedInterestCost")}</span>
+              </div>
+              <span className="text-lg font-bold text-warning">
+                {formatCurrency(parseFloat(debtSummary.totalInterestCost))}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Debts Grid */}
       {isLoading ? (

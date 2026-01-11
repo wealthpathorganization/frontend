@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, TrendingUp } from "lucide-react"
+import { ArrowLeft, Loader2, TrendingUp } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
@@ -36,11 +36,19 @@ function LoginContent() {
   const router = useRouter()
   const locale = useLocale()
   const t = useTranslations('auth')
+  const t2fa = useTranslations('twoFactor')
   const searchParams = useSearchParams()
-  const { login, setToken, isLoading } = useAuthStore()
+  const { login, loginWithTOTP, loginWithBackupCode, setToken, isLoading } = useAuthStore()
   const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+
+  // 2FA state
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [tempToken, setTempToken] = useState("")
+  const [totpCode, setTotpCode] = useState("")
+  const [useBackupCode, setUseBackupCode] = useState(false)
+  const [backupCode, setBackupCode] = useState("")
 
   // Handle OAuth callback token
   useEffect(() => {
@@ -60,13 +68,18 @@ function LoginContent() {
         variant: "destructive",
       })
     }
-  }, [searchParams, setToken, router, toast])
+  }, [searchParams, setToken, router, toast, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await login(email, password)
-      router.push(`/${locale}/dashboard`)
+      const result = await login(email, password)
+      if (result.requiresTOTP && result.tempToken) {
+        setRequires2FA(true)
+        setTempToken(result.tempToken)
+      } else {
+        router.push(`/${locale}/dashboard`)
+      }
     } catch (error) {
       toast({
         title: t('loginFailed'),
@@ -76,9 +89,121 @@ function LoginContent() {
     }
   }
 
+  const handle2FASubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (useBackupCode) {
+        await loginWithBackupCode(tempToken, backupCode)
+      } else {
+        await loginWithTOTP(tempToken, totpCode)
+      }
+      router.push(`/${locale}/dashboard`)
+    } catch {
+      toast({
+        title: t('loginFailed'),
+        description: t2fa('invalidCode'),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleBack = () => {
+    setRequires2FA(false)
+    setTempToken("")
+    setTotpCode("")
+    setBackupCode("")
+    setUseBackupCode(false)
+  }
+
   const handleOAuthLogin = (provider: string) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || ""
     window.location.href = `${apiUrl}/api/auth/${provider}`
+  }
+
+  // 2FA verification screen
+  if (requires2FA) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
+
+        <Card className="w-full max-w-md relative animate-fade-in">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 shadow-lg">
+              <TrendingUp className="w-7 h-7 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-display">{t2fa('loginTitle')}</CardTitle>
+            <CardDescription>{t2fa('loginDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handle2FASubmit} className="space-y-4">
+              {!useBackupCode ? (
+                <div className="space-y-2">
+                  <Label htmlFor="totp">{t2fa('verifyCode')}</Label>
+                  <Input
+                    id="totp"
+                    type="text"
+                    inputMode="numeric"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="font-mono text-center text-lg tracking-widest"
+                    autoFocus
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="backup">{t2fa('backupCodeDescription')}</Label>
+                  <Input
+                    id="backup"
+                    type="text"
+                    value={backupCode}
+                    onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                    placeholder={t2fa('backupCodePlaceholder')}
+                    className="font-mono text-center text-lg tracking-widest"
+                    autoFocus
+                    required
+                  />
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {t('signingIn')}
+                  </>
+                ) : (
+                  t('signIn')
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                onClick={() => setUseBackupCode(!useBackupCode)}
+                className="text-sm"
+              >
+                {useBackupCode ? t2fa('enterCode') : t2fa('useBackupCode')}
+              </Button>
+            </div>
+
+            <div className="mt-4 text-center">
+              <Button
+                variant="ghost"
+                onClick={handleBack}
+                className="text-sm text-muted-foreground"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t2fa('backButton')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

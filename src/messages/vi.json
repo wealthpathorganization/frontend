@@ -193,7 +193,12 @@
     "overBudget": "Vượt ngân sách",
     "noBudgets": "Không tìm thấy ngân sách",
     "noBudgetsYet": "Chưa thiết lập ngân sách",
-    "createBudgetToStart": "Tạo ngân sách để bắt đầu theo dõi chi tiêu"
+    "createBudgetToStart": "Tạo ngân sách để bắt đầu theo dõi chi tiêu",
+    "enableRollover": "Bật chuyển tiếp",
+    "rolloverDescription": "Chuyển ngân sách chưa dùng sang kỳ tiếp theo",
+    "maxRollover": "Tối đa chuyển tiếp",
+    "maxRolloverPlaceholder": "Không giới hạn",
+    "rollover": "Chuyển tiếp"
   },
   "savings": {
     "title": "Mục tiêu tiết kiệm",
@@ -221,7 +226,9 @@
     "addFunds": "Thêm tiền",
     "fundsAdded": "Đã thêm tiền thành công",
     "saved": "đã tiết kiệm",
-    "remaining": "còn lại"
+    "remaining": "còn lại",
+    "onTrack": "Đúng tiến độ",
+    "behindSchedule": "Chậm tiến độ"
   },
   "debts": {
     "title": "Quản Lý Nợ",
@@ -271,7 +278,10 @@
     "monthsLeft": "Số tháng còn lại",
     "payoffPlanFor": "Kế hoạch trả nợ cho",
     "month": "Tháng",
-    "principal": "Gốc"
+    "principal": "Gốc",
+    "debtFreeDate": "Ngày hết nợ",
+    "youAreDebtFree": "Bạn đã hết nợ!",
+    "projectedInterestCost": "Dự kiến tổng lãi nếu trả tối thiểu"
   },
   "rates": {
     "title": "Lãi suất",
@@ -325,6 +335,75 @@
     "upcoming": "Sắp tới",
     "autoAddDescription": "Các giao dịch này sẽ được tự động thêm theo lịch",
     "descriptionPlaceholder": "VD: Tiền thuê nhà, Netflix..."
+  },
+  "export": {
+    "export": "Xuất",
+    "exportCSV": "Xuất CSV",
+    "exportPDF": "Xuất PDF",
+    "csvExported": "Đã xuất giao dịch sang CSV",
+    "pdfExported": "Đã xuất báo cáo sang PDF",
+    "exportFailed": "Không thể xuất dữ liệu"
+  },
+  "twoFactor": {
+    "title": "Xác thực hai yếu tố",
+    "description": "Thêm lớp bảo mật cho tài khoản của bạn",
+    "enabled": "Đã bật 2FA",
+    "disabled": "Chưa bật 2FA",
+    "setup": "Thiết lập 2FA",
+    "disable": "Tắt 2FA",
+    "setupTitle": "Thiết lập xác thực hai yếu tố",
+    "setupDescription": "Quét mã QR bằng ứng dụng xác thực hoặc nhập mã thủ công",
+    "scanQR": "Quét mã QR",
+    "manualEntry": "Nhập thủ công",
+    "secretKey": "Mã bí mật",
+    "verifyCode": "Xác minh mã",
+    "enterCode": "Nhập mã 6 chữ số từ ứng dụng xác thực",
+    "verify": "Xác minh & Bật",
+    "verifying": "Đang xác minh...",
+    "backupCodesTitle": "Lưu mã dự phòng",
+    "backupCodesDescription": "Lưu các mã này ở nơi an toàn. Bạn có thể sử dụng chúng để truy cập tài khoản nếu mất thiết bị xác thực.",
+    "backupCodesCopied": "Đã sao chép mã dự phòng",
+    "copyBackupCodes": "Sao chép mã",
+    "done": "Xong",
+    "disableTitle": "Tắt xác thực hai yếu tố",
+    "disableDescription": "Nhập mã 2FA hiện tại để tắt xác thực hai yếu tố",
+    "disabling": "Đang tắt...",
+    "invalidCode": "Mã xác minh không hợp lệ",
+    "setupSuccess": "Đã bật 2FA",
+    "disableSuccess": "Đã tắt 2FA",
+    "codeRequired": "Vui lòng nhập mã xác minh",
+    "loginTitle": "Yêu cầu xác thực hai yếu tố",
+    "loginDescription": "Nhập mã 6 chữ số từ ứng dụng xác thực",
+    "useBackupCode": "Sử dụng mã dự phòng",
+    "backupCodePlaceholder": "XXXX-XXXX",
+    "backupCodeDescription": "Nhập một trong các mã dự phòng của bạn",
+    "backButton": "Quay lại đăng nhập"
+  },
+  "notifications": {
+    "title": "Thông báo đẩy",
+    "description": "Nhận cảnh báo về hóa đơn, ngân sách và mục tiêu tiết kiệm",
+    "enableNotifications": "Thông báo đẩy",
+    "enabled": "Thông báo đã được bật",
+    "disabled": "Thông báo đã tắt",
+    "enable": "Bật",
+    "disable": "Tắt",
+    "notSupported": "Trình duyệt không hỗ trợ thông báo đẩy",
+    "permissionDenied": "Quyền thông báo bị từ chối. Vui lòng bật trong cài đặt trình duyệt.",
+    "subscribed": "Đã bật thông báo đẩy",
+    "unsubscribed": "Đã tắt thông báo đẩy",
+    "toggleError": "Không thể bật/tắt thông báo",
+    "preferencesSaved": "Đã lưu tùy chọn thông báo",
+    "preferencesSaveError": "Không thể lưu tùy chọn",
+    "billReminders": "Nhắc nhở hóa đơn",
+    "billRemindersDescription": "Nhận thông báo trước khi hóa đơn đến hạn",
+    "daysBefore": "Số ngày trước",
+    "budgetAlerts": "Cảnh báo ngân sách",
+    "budgetAlertsDescription": "Nhận thông báo khi sắp đạt giới hạn ngân sách",
+    "alertThreshold": "Ngưỡng cảnh báo",
+    "goalMilestones": "Cột mốc mục tiêu",
+    "goalMilestonesDescription": "Nhận thông báo khi đạt cột mốc tiết kiệm",
+    "weeklySummary": "Tóm tắt hàng tuần",
+    "weeklySummaryDescription": "Nhận tóm tắt tài chính hàng tuần"
   }
 }
 

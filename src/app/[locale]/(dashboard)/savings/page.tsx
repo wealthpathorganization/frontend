@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, SavingsGoal, CreateSavingsGoalInput } from "@/lib/api"
+import { api, SavingsGoalWithProjection, CreateSavingsGoalInput } from "@/lib/api"
 import { formatPercent, formatDate, toAPIDateTime } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslations } from "next-intl"
-import { Plus, Trash2, Loader2, Target, DollarSign, Calendar } from "lucide-react"
+import { Plus, Trash2, Loader2, Target, DollarSign, Calendar, TrendingUp, Clock, CheckCircle2, AlertTriangle } from "lucide-react"
 
 const COLORS = [
   "#8B5CF6",
@@ -46,7 +46,7 @@ export default function SavingsPage() {
   const { user } = useAuthStore()
   const currency = user?.currency || "USD"
 
-  const { data: goals, isLoading } = useQuery<SavingsGoal[]>({
+  const { data: goals, isLoading } = useQuery<SavingsGoalWithProjection[]>({
     queryKey: ["savings-goals"],
     queryFn: () => api.getSavingsGoals(),
   })
@@ -273,6 +273,49 @@ export default function SavingsPage() {
                       {formatPercent(percentage)} complete
                     </p>
                   </div>
+
+                  {/* Projection Information */}
+                  {!isComplete && (
+                    <div className="space-y-2 pt-2 border-t">
+                      {/* Monthly Contribution Rate */}
+                      {parseFloat(goal.monthlyContributionRate) > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <TrendingUp className="w-4 h-4" />
+                          <span>{formatCurrency(parseFloat(goal.monthlyContributionRate))}/mo avg</span>
+                        </div>
+                      )}
+
+                      {/* Estimated Completion */}
+                      {goal.estimatedCompletionDate && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          <span>
+                            ETA: {formatDate(goal.estimatedCompletionDate)}
+                            {goal.monthsToCompletion && (
+                              <span className="ml-1">({goal.monthsToCompletion} mo)</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* On Track Status (only shown when target date exists) */}
+                      {goal.isOnTrack !== undefined && goal.targetDate && (
+                        <div className={`flex items-center gap-2 text-sm ${goal.isOnTrack ? "text-success" : "text-warning"}`}>
+                          {goal.isOnTrack ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>{t('savings.onTrack')}</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="w-4 h-4" />
+                              <span>{t('savings.behindSchedule')}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {goal.targetDate && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

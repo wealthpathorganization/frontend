@@ -65,7 +65,21 @@ class ApiClient {
   }
 
   async login(data: { email: string; password: string }) {
-    return this.request<{ token: string; user: User }>("/api/auth/login", {
+    return this.request<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async loginWithTOTP(data: { tempToken: string; code: string }) {
+    return this.request<AuthResponse>("/api/auth/login/2fa", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async loginWithBackupCode(data: { tempToken: string; backupCode: string }) {
+    return this.request<AuthResponse>("/api/auth/login/2fa/backup", {
       method: "POST",
       body: JSON.stringify(data),
     })
@@ -79,6 +93,34 @@ class ApiClient {
     return this.request<User>("/api/auth/settings", {
       method: "PUT",
       body: JSON.stringify(data),
+    })
+  }
+
+  // 2FA Management
+  async setup2FA() {
+    return this.request<TOTPSetupResponse>("/api/auth/2fa/setup", {
+      method: "POST",
+    })
+  }
+
+  async verify2FA(code: string) {
+    return this.request<TOTPVerifyResponse>("/api/auth/2fa/verify", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    })
+  }
+
+  async disable2FA(code: string) {
+    return this.request<{ message: string }>("/api/auth/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    })
+  }
+
+  async regenerateBackupCodes(code: string) {
+    return this.request<TOTPVerifyResponse>("/api/auth/2fa/backup-codes", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     })
   }
 
@@ -139,7 +181,7 @@ class ApiClient {
 
   // Savings Goals
   async getSavingsGoals() {
-    return this.request<SavingsGoal[]>("/api/savings-goals")
+    return this.request<SavingsGoalWithProjection[]>("/api/savings-goals")
   }
 
   async createSavingsGoal(data: CreateSavingsGoalInput) {
@@ -170,6 +212,10 @@ class ApiClient {
   // Debts
   async getDebts() {
     return this.request<Debt[]>("/api/debts")
+  }
+
+  async getDebtSummary() {
+    return this.request<DebtSummary>("/api/debts/summary")
   }
 
   async createDebt(data: CreateDebtInput) {
@@ -299,10 +345,87 @@ class ApiClient {
     return this.request<CategoryTrendsResponse>("/api/reports/category-trends", { params })
   }
 
+  // Export
+  async exportTransactionsCSV(filters?: TransactionFilters) {
+    const params: Record<string, string> = {}
+    if (filters) {
+      if (filters.type) params.type = filters.type
+      if (filters.category) params.category = filters.category
+      if (filters.categories) params.categories = filters.categories
+      if (filters.search) params.search = filters.search
+      if (filters.startDate) params.startDate = filters.startDate
+      if (filters.endDate) params.endDate = filters.endDate
+    }
+    const queryString = new URLSearchParams(params).toString()
+    const url = `${API_BASE}/api/transactions/export/csv${queryString ? `?${queryString}` : ""}`
+
+    const headers: Record<string, string> = {}
+    const token = this.getToken()
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      throw new Error("Failed to export transactions")
+    }
+
+    const blob = await response.blob()
+    const filename = response.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] || "transactions.csv"
+    return { blob, filename }
+  }
+
+  async exportMonthlyReportPDF(year: number, month: number) {
+    const url = `${API_BASE}/api/reports/monthly/${year}/${month}/export/pdf`
+
+    const headers: Record<string, string> = {}
+    const token = this.getToken()
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      throw new Error("Failed to export report")
+    }
+
+    const blob = await response.blob()
+    const filename = response.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] || `report_${year}_${month}.pdf`
+    return { blob, filename }
+  }
+
   // Calendar
   async getRecurringCalendar(year: number, month: number) {
     return this.request<CalendarResponse>("/api/recurring/calendar", {
       params: { year: year.toString(), month: month.toString() },
+    })
+  }
+
+  // Push Notifications
+  async subscribeToPush(data: { endpoint: string; p256dh: string; auth: string; userAgent?: string }) {
+    return this.request<PushSubscription>("/api/notifications/subscribe", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async unsubscribeFromPush(data: { endpoint: string }) {
+    return this.request("/api/notifications/unsubscribe", {
+      method: "DELETE",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getNotificationPreferences() {
+    return this.request<NotificationPreferences>("/api/notifications/preferences")
+  }
+
+  async updateNotificationPreferences(data: UpdateNotificationPreferencesInput) {
+    return this.request<NotificationPreferences>("/api/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify(data),
     })
   }
 }
@@ -324,7 +447,27 @@ export interface User {
   email: string
   name: string
   currency: string
+  totpEnabled: boolean
   createdAt: string
+}
+
+// Auth Response with optional 2FA fields
+export interface AuthResponse {
+  token?: string
+  user?: User
+  requiresTOTP?: boolean
+  tempToken?: string
+}
+
+// 2FA Types
+export interface TOTPSetupResponse {
+  secret: string
+  qrCodeUrl: string
+  manualEntry: string
+}
+
+export interface TOTPVerifyResponse {
+  backupCodes: string[]
 }
 
 export interface UpdateSettingsInput {
@@ -360,11 +503,26 @@ export interface Transaction {
 export interface TransactionFilters {
   type?: string
   category?: string
+  categories?: string      // Comma-separated list of categories
+  search?: string          // Text search in description
+  minAmount?: string       // Minimum amount filter
+  maxAmount?: string       // Maximum amount filter
+  datePreset?: string      // Preset: last7days, last30days, thisMonth, lastMonth
   startDate?: string
   endDate?: string
   page?: string
   pageSize?: string
 }
+
+export type DatePreset = "last7days" | "last30days" | "thisMonth" | "lastMonth" | "custom"
+
+export const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "last7days", label: "Last 7 days" },
+  { value: "last30days", label: "Last 30 days" },
+  { value: "thisMonth", label: "This month" },
+  { value: "lastMonth", label: "Last month" },
+  { value: "custom", label: "Custom range" },
+]
 
 export interface CreateTransactionInput {
   type: "income" | "expense"
@@ -384,6 +542,9 @@ export interface Budget {
   period: string
   startDate: string
   endDate?: string
+  enableRollover: boolean
+  maxRolloverAmount?: string
+  rolloverAmount: string
 }
 
 export interface BudgetWithSpent extends Budget {
@@ -399,6 +560,8 @@ export interface CreateBudgetInput {
   period?: string
   startDate: string
   endDate?: string
+  enableRollover?: boolean
+  maxRolloverAmount?: number
 }
 
 export interface SavingsGoal {
@@ -412,6 +575,13 @@ export interface SavingsGoal {
   color: string
   icon: string
   createdAt: string
+}
+
+export interface SavingsGoalWithProjection extends SavingsGoal {
+  monthlyContributionRate: string
+  estimatedCompletionDate?: string
+  monthsToCompletion?: number
+  isOnTrack?: boolean
 }
 
 export interface CreateSavingsGoalInput {
@@ -481,6 +651,27 @@ export interface InterestCalculatorResult {
   totalPayment: string
   totalInterest: string
   payoffDate: string
+}
+
+export interface DebtSummary {
+  totalDebt: string
+  debtCount: number
+  debtFreeDate?: string
+  monthsToDebtFree?: number
+  totalInterestCost: string
+  debtsByPayoff: DebtPayoffSummary[]
+}
+
+export interface DebtPayoffSummary {
+  id: string
+  name: string
+  type: string
+  currentBalance: string
+  interestRate: string
+  minimumPayment: string
+  payoffDate: string
+  monthsToPayoff: number
+  totalInterest: string
 }
 
 export interface DashboardData {
@@ -684,5 +875,39 @@ export interface CalendarSummary {
   billCount: number
   incomeCount: number
   expenseCount: number
+}
+
+// Push Notification Types
+export interface PushSubscription {
+  id: string
+  userId: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotificationPreferences {
+  id: string
+  userId: string
+  billRemindersEnabled: boolean
+  billReminderDaysBefore: number
+  budgetAlertsEnabled: boolean
+  budgetAlertThreshold: number
+  goalMilestonesEnabled: boolean
+  weeklySummaryEnabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpdateNotificationPreferencesInput {
+  billRemindersEnabled?: boolean
+  billReminderDaysBefore?: number
+  budgetAlertsEnabled?: boolean
+  budgetAlertThreshold?: number
+  goalMilestonesEnabled?: boolean
+  weeklySummaryEnabled?: boolean
 }
 

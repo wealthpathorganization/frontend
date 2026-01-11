@@ -27,7 +27,8 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslations } from "next-intl"
 import { useAuthStore } from "@/store/auth"
-import { Plus, Trash2, Loader2, PiggyBank, AlertTriangle, CheckCircle } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Trash2, Loader2, PiggyBank, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react"
 
 const CATEGORIES = [
   "Housing",
@@ -48,6 +49,8 @@ export default function BudgetsPage() {
   const { formatCurrency } = useCurrency()
   const [isOpen, setIsOpen] = useState(false)
   const [amount, setAmount] = useState("")
+  const [enableRollover, setEnableRollover] = useState(false)
+  const [maxRollover, setMaxRollover] = useState("")
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const t = useTranslations()
@@ -86,13 +89,21 @@ export default function BudgetsPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    createMutation.mutate({
+    const input: CreateBudgetInput = {
       category: formData.get("category") as string,
       amount: parseFloat(amount.replace(/,/g, "")),
       period: formData.get("period") as string,
       startDate: new Date().toISOString(), // RFC3339 format for backend
-    })
-    setAmount("") // Reset after submit
+      enableRollover,
+    }
+    if (enableRollover && maxRollover) {
+      input.maxRolloverAmount = parseFloat(maxRollover.replace(/,/g, ""))
+    }
+    createMutation.mutate(input)
+    // Reset after submit
+    setAmount("")
+    setEnableRollover(false)
+    setMaxRollover("")
   }
 
   const totalBudget = budgets?.reduce((sum, b) => sum + parseFloat(b.amount), 0) || 0
@@ -158,6 +169,31 @@ export default function BudgetsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enableRollover">{t('budgets.enableRollover')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('budgets.rolloverDescription')}</p>
+                </div>
+                <Switch
+                  id="enableRollover"
+                  checked={enableRollover}
+                  onCheckedChange={setEnableRollover}
+                />
+              </div>
+
+              {enableRollover && (
+                <div className="space-y-2">
+                  <Label htmlFor="maxRollover">{t('budgets.maxRollover')} <span className="text-muted-foreground">({t('common.optional')})</span></Label>
+                  <CurrencyInput
+                    id="maxRollover"
+                    value={maxRollover}
+                    onChange={setMaxRollover}
+                    currency={currency}
+                    placeholder={t('budgets.maxRolloverPlaceholder')}
+                  />
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? (
@@ -239,7 +275,15 @@ export default function BudgetsPage() {
                 className={isOverBudget ? "border-destructive/50" : ""}
               >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg">{budget.category}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">{budget.category}</CardTitle>
+                    {budget.enableRollover && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                        <RefreshCw className="w-3 h-3" />
+                        {t('budgets.rollover')}
+                      </span>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -254,7 +298,10 @@ export default function BudgetsPage() {
                     <div>
                       <p className="text-3xl font-bold">{formatCurrency(budget.spent)}</p>
                       <p className="text-sm text-muted-foreground">
-                        of {formatCurrency(budget.amount)} {budget.period}
+                        of {formatCurrency(parseFloat(budget.amount) + parseFloat(budget.rolloverAmount || "0"))} {budget.period}
+                        {parseFloat(budget.rolloverAmount || "0") > 0 && (
+                          <span className="text-primary"> (+{formatCurrency(budget.rolloverAmount)} {t('budgets.rollover').toLowerCase()})</span>
+                        )}
                       </p>
                     </div>
                     <div className="text-right">

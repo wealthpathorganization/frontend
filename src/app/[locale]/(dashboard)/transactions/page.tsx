@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, Suspense } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { api, Transaction, CreateTransactionInput } from "@/lib/api"
+import { api, Transaction, CreateTransactionInput, TransactionFilters } from "@/lib/api"
 import { formatDate } from "@/lib/utils"
 import { useCurrency } from "@/hooks/use-currency"
 import { Button } from "@/components/ui/button"
@@ -35,7 +35,15 @@ import {
   Trash2,
   Loader2,
   Receipt,
+  Download,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { TransactionFiltersComponent } from "@/components/transactions/transaction-filters"
 
 const EXPENSE_CATEGORIES = [
   "Housing",
@@ -70,21 +78,51 @@ export default function TransactionsPage() {
   const [isOpen, setIsOpen] = useState(false)
   const [type, setType] = useState<"income" | "expense">("expense")
   const [amount, setAmount] = useState("")
+  const [filters, setFilters] = useState<TransactionFilters>({ pageSize: "50" })
+  const [isExporting, setIsExporting] = useState(false)
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const t = useTranslations()
   const { user } = useAuthStore()
   const currency = user?.currency || "USD"
 
+  const handleExportCSV = async () => {
+    setIsExporting(true)
+    try {
+      const { blob, filename } = await api.exportTransactionsCSV(filters)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast({ title: t("common.success"), description: t("export.csvExported") })
+    } catch {
+      toast({
+        title: t("common.error"),
+        description: t("export.exportFailed"),
+        variant: "destructive",
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleFiltersChange = useCallback((newFilters: TransactionFilters) => {
+    setFilters({ ...newFilters, pageSize: "50" })
+  }, [])
+
   const { data: transactions, isLoading } = useQuery<Transaction[]>({
-    queryKey: ["transactions"],
-    queryFn: () => api.getTransactions({ pageSize: "50" }),
+    queryKey: ["transactions", filters],
+    queryFn: () => api.getTransactions(filters),
   })
 
   const createMutation = useMutation({
     mutationFn: (data: CreateTransactionInput) => api.createTransaction(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] })
+      queryClient.invalidateQueries({ queryKey: ["transactions"], refetchType: "all" })
       queryClient.invalidateQueries({ queryKey: ["dashboard"] })
       setIsOpen(false)
       toast({ title: t('transactions.transactionAdded'), variant: "default" })
@@ -101,7 +139,7 @@ export default function TransactionsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteTransaction(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] })
+      queryClient.invalidateQueries({ queryKey: ["transactions"], refetchType: "all" })
       queryClient.invalidateQueries({ queryKey: ["dashboard"] })
       toast({ title: t('transactions.transactionDeleted') })
     },
@@ -130,13 +168,31 @@ export default function TransactionsPage() {
           <h1 className="text-3xl font-display font-bold">{t('transactions.title')}</h1>
           <p className="text-muted-foreground mt-1">{t('transactions.subtitle')}</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('transactions.addTransaction')}
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isExporting}>
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {t("export.export")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV}>
+                {t("export.exportCSV")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('transactions.addTransaction')}
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t('transactions.addTransaction')}</DialogTitle>
@@ -218,8 +274,17 @@ export default function TransactionsPage() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Filters */}
+      <Suspense fallback={<div className="h-12 bg-muted animate-pulse rounded-lg" />}>
+        <TransactionFiltersComponent
+          onFiltersChange={handleFiltersChange}
+          initialFilters={filters}
+        />
+      </Suspense>
 
       <Tabs defaultValue="all">
         <TabsList>

@@ -19,6 +19,8 @@ import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslations } from 'next-intl'
+import { TwoFactorSetup } from "@/components/settings/two-factor-setup"
+import { NotificationPreferences } from "@/components/settings/notification-preferences"
 
 export default function SettingsPage() {
   const t = useTranslations()
@@ -113,6 +115,10 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <TwoFactorSetup />
+
+      <NotificationPreferences />
 
       {hasChanges && (
         <div className="flex justify-end">
