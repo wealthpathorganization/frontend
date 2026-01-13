@@ -117,10 +117,31 @@ npm run test:e2e -- --grep "@smoke"      # Only smoke tests
 FULL_SUITE=1 npm run test:e2e            # All tests
 ```
 
-## Component Rules (from .claude/rules/frontend.md)
+## Rules
+
+Detailed coding patterns and best practices are documented in `.claude/rules/frontend.md`. Key topics covered:
+
+- **Component Structure:** File naming, forwardRef pattern, file organization
+- **State Management:** Zustand store patterns, selectors, persistence
+- **API Integration:** TanStack Query key factories, hooks, optimistic updates
+- **Styling:** cn() utility, CVA variants, theme variables
+- **Loading/Error States:** Skeleton patterns, error handling
+- **Internationalization:** next-intl hooks, message file structure
+- **Testing:** Jest unit tests, Playwright E2E, mocking patterns
+- **Form Handling:** React Hook Form with Zod validation
+
+### Quick Reference
+
+```bash
+# View full rules
+cat .claude/rules/frontend.md
+```
+
+### Key Patterns
 
 - Use `React.forwardRef` for components wrapping HTML elements
 - Set `displayName` on forwardRef components
 - Use `cn()` from `@/lib/utils` for dynamic class composition
-- Query keys as arrays: `["transactions", filters]`
+- Query keys as arrays with factory: `transactionKeys.list(filters)`
 - Stale time default: 60 seconds for TanStack Query
+- Use store selectors: `useAuthStore((state) => state.user)`
