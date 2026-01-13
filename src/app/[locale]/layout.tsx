@@ -13,18 +13,18 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
 }
 
-export async function generateMetadata({ 
-  params: { locale } 
-}: { 
-  params: { locale: string } 
+export async function generateMetadata({
+  params: { locale }
+}: {
+  params: { locale: string }
 }): Promise<Metadata> {
   const isVi = locale === 'vi'
-  
-  const title = isVi 
-    ? 'WealthPath - Quản lý tài chính cá nhân' 
+
+  const title = isVi
+    ? 'WealthPath - Quản lý tài chính cá nhân'
     : 'WealthPath - Personal Finance Manager'
-  
-  const description = isVi 
+
+  const description = isVi
     ? 'Theo dõi chi tiêu, quản lý ngân sách, đặt mục tiêu tiết kiệm và quản lý nợ. WealthPath giúp bạn kiểm soát tài chính cá nhân.'
     : 'Track expenses, manage budgets, set savings goals, and manage debt. WealthPath helps you take control of your personal finances.'
 
@@ -35,12 +35,21 @@ export async function generateMetadata({
       template: `%s | WealthPath`
     },
     description,
-    keywords: isVi 
+    keywords: isVi
       ? ['quản lý tài chính', 'theo dõi chi tiêu', 'ngân sách', 'tiết kiệm', 'quản lý nợ', 'tài chính cá nhân']
       : ['finance management', 'expense tracker', 'budget', 'savings', 'debt management', 'personal finance'],
     authors: [{ name: 'WealthPath Team' }],
     creator: 'WealthPath',
     publisher: 'WealthPath',
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'WealthPath',
+    },
+    formatDetection: {
+      telephone: false,
+    },
     openGraph: {
       title,
       description,
@@ -109,6 +118,28 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* PWA Meta Tags */}
+        <meta name="application-name" content="WealthPath" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="WealthPath" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#10b981" />
+
+        {/* PWA Icons */}
+        <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
+
+        {/* Splash Screens for iOS */}
+        <link
+          rel="apple-touch-startup-image"
+          href="/icons/icon-512x512.png"
+          media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)"
+        />
+      </head>
       <body className="min-h-screen">
         <GoogleAnalytics />
         <NextIntlClientProvider messages={messages}>
@@ -116,6 +147,26 @@ export default async function LocaleLayout({
             {children}
           </Providers>
         </NextIntlClientProvider>
+
+        {/* Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('[PWA] Service Worker registered:', registration.scope);
+                    },
+                    function(err) {
+                      console.log('[PWA] Service Worker registration failed:', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
