@@ -126,6 +126,8 @@
     "addTransaction": "Thêm giao dịch",
     "transactionAdded": "Đã thêm giao dịch",
     "transactionDeleted": "Đã xóa giao dịch",
+    "transactionUpdated": "Đã cập nhật giao dịch",
+    "editTransaction": "Chỉnh sửa giao dịch",
     "income": "Thu nhập",
     "expense": "Chi tiêu",
     "expenses": "Chi tiêu",

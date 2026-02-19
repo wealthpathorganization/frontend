@@ -33,6 +33,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Trash2,
+  Pencil,
   Loader2,
   Receipt,
   Download,
@@ -76,8 +77,12 @@ const INCOME_CATEGORIES = [
 
 export default function TransactionsPage() {
   const [isOpen, setIsOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [type, setType] = useState<"income" | "expense">("expense")
   const [amount, setAmount] = useState("")
+  const [editType, setEditType] = useState<"income" | "expense">("expense")
+  const [editAmount, setEditAmount] = useState("")
   const [filters, setFilters] = useState<TransactionFilters>({ pageSize: "50" })
   const [isExporting, setIsExporting] = useState(false)
   const { toast } = useToast()
@@ -144,6 +149,48 @@ export default function TransactionsPage() {
       toast({ title: t('transactions.transactionDeleted') })
     },
   })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CreateTransactionInput }) =>
+      api.updateTransaction(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"], refetchType: "all" })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      setIsEditOpen(false)
+      setEditingTransaction(null)
+      toast({ title: t('transactions.transactionUpdated'), variant: "default" })
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update transaction",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingTransaction(tx)
+    setEditType(tx.type as "income" | "expense")
+    setEditAmount(String(tx.amount))
+    setIsEditOpen(true)
+  }
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editingTransaction) return
+    const formData = new FormData(e.currentTarget)
+    updateMutation.mutate({
+      id: editingTransaction.id,
+      data: {
+        type: editType,
+        amount: parseFloat(editAmount.replace(/,/g, "")),
+        category: formData.get("category") as string,
+        description: formData.get("description") as string,
+        date: formData.get("date") as string,
+      },
+    })
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -298,6 +345,7 @@ export default function TransactionsPage() {
             transactions={transactions || []}
             isLoading={isLoading}
             onDelete={(id) => deleteMutation.mutate(id)}
+            onEdit={handleEdit}
             t={t}
           />
         </TabsContent>
@@ -307,6 +355,7 @@ export default function TransactionsPage() {
             transactions={incomeTransactions}
             isLoading={isLoading}
             onDelete={(id) => deleteMutation.mutate(id)}
+            onEdit={handleEdit}
             t={t}
           />
         </TabsContent>
@@ -316,10 +365,103 @@ export default function TransactionsPage() {
             transactions={expenseTransactions}
             isLoading={isLoading}
             onDelete={(id) => deleteMutation.mutate(id)}
+            onEdit={handleEdit}
             t={t}
           />
         </TabsContent>
       </Tabs>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setEditingTransaction(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('transactions.editTransaction')}</DialogTitle>
+          </DialogHeader>
+          {editingTransaction && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={editType === "expense" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setEditType("expense")}
+                >
+                  <ArrowDownRight className="w-4 h-4 mr-2" />
+                  {t('transactions.expense')}
+                </Button>
+                <Button
+                  type="button"
+                  variant={editType === "income" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setEditType("income")}
+                >
+                  <ArrowUpRight className="w-4 h-4 mr-2" />
+                  {t('transactions.income')}
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">{t('transactions.amount')}</Label>
+                <CurrencyInput
+                  id="edit-amount"
+                  value={editAmount}
+                  onChange={setEditAmount}
+                  currency={currency}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">{t('transactions.category')}</Label>
+                <Select name="category" defaultValue={editingTransaction.category} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('common.selectCategory')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(editType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">{t('transactions.descriptionOptional')}</Label>
+                <Input
+                  id="edit-description"
+                  name="description"
+                  placeholder={t('transactions.addNote')}
+                  defaultValue={editingTransaction.description || ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">{t('transactions.date')}</Label>
+                <Input
+                  id="edit-date"
+                  name="date"
+                  type="date"
+                  defaultValue={editingTransaction.date?.split("T")[0]}
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {t('common.saving')}
+                  </>
+                ) : (
+                  t('common.saveChanges')
+                )}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -328,11 +470,13 @@ function TransactionList({
   transactions,
   isLoading,
   onDelete,
+  onEdit,
   t,
 }: {
   transactions: Transaction[]
   isLoading: boolean
   onDelete: (id: string) => void
+  onEdit: (tx: Transaction) => void
   t: ReturnType<typeof useTranslations>
 }) {
   const { formatCurrency } = useCurrency()
@@ -416,6 +560,14 @@ function TransactionList({
                       >
                         {isIncome ? "+" : "-"}{formatCurrency(tx.amount)}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary"
+                        onClick={() => onEdit(tx)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

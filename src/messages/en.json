@@ -126,6 +126,8 @@
     "addTransaction": "Add Transaction",
     "transactionAdded": "Transaction added",
     "transactionDeleted": "Transaction deleted",
+    "transactionUpdated": "Transaction updated",
+    "editTransaction": "Edit Transaction",
     "income": "Income",
     "expense": "Expense",
     "expenses": "Expenses",
